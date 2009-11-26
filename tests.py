@@ -30,6 +30,18 @@ def scalar_addition():
 		A2.update()
 		A3.update()
 		print np.hstack((A1.qmu,A2.qmu,A3.qmu)).flatten()
+		
+def scalar_multiplication():
+	A1 = nodes.Gaussian(1,np.array([[0]]),np.array([[0.001]]))
+	A2 = nodes.Gaussian(1,np.array([[0]]),np.array([[0.001]]))
+	C = nodes.Gaussian(1,A1*A2,np.array([[10]]))
+    
+	C.observe(np.array([[16]]))
+    
+	for i in range(5000):
+		A1.update()
+		A2.update()
+		print np.hstack((A1.qmu,A2.qmu)).flatten()
 
 def vector_addition():
 	A1 = nodes.Gaussian(3,np.zeros((3,1)),np.eye(3)*0.01)

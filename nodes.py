@@ -180,7 +180,7 @@ class Multiplication(node):
 	def pass_up_ex(self,requester):
 		""""""
 		sumMu = sum([e.pass_up_ex(self) for e in self.children])
-		sumC = sum([e.pass_up_prec(self) for e in self.children])
+		#sumC = sum([e.pass_up_prec(self) for e in self.children]) - not needed here
 		if requester is self.x1:
 			if self.x1.shape[1] == 1:#lhs is column: therefore rhs is scalar: easy enough
 				return float(self.get_x2())*sumMu
@@ -229,6 +229,28 @@ class hstack(node):
 	def get_Exxt(self):
 		return # TODO
 	
+class transpose(node):
+	def __init__(self,parent):
+		"""I'm designing this to sit between a Gaussian Node and a multiplication node (for inner products)"""
+		assert isinstance(parent, Gaussian), "Can only transpose Gaussian Nodes..."
+		self.parent = parent
+		self.shape = self.parent.shape[::-1]
+		self.children = []
+	def pass_down_Ex(self):
+		return self.parent.pass_down_Ex().T
+	def pass_down_ExxT(self):
+		return self.parent.pass_down_ExTx()
+	def pass_down_ExTx(self):
+		return self.parent.pass_down_ExxT()
+	def pass_up_prec(self):
+		#get messages from the child node(s), undo the transpose nonsense, passup
+		Csum = sum([c.pass_up_prec() for c in self.children])
+		return #? TODO
+	def pass_up_ex(self):
+		return #? TODO
+		
+		
+		
 	
 	    
 class Gamma:
