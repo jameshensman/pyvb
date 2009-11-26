@@ -17,6 +17,11 @@ class node:
 	return Addition(self,other)
     def __mul__(self,other):
 	return Multiplication(self,other)
+
+#it's a shame we can;t override the __rmul__ command - when a numpy array gets multiplied by an object with an __rmul__, it passes each of it's elements to that rmul seperately. otherwise we could just do:
+# def __rmul__(self,other):
+#     return Multiplication(other,self)
+#I wonder if there's a way to stop the numpy array from doing this (throw it an error?)
     
 class Gaussian(node):
     def __init__(self,dim,pmu,pprec):
