@@ -43,10 +43,10 @@ class Gaussian(node):
 	elif isinstance(pprec,Gamma):
 	    self.get_pprec = lambda : np.eye(self.shape[0])*pprec.get_Ex()
 	    pprec.addChild(self)
-	elif type(pprec)==list:
-	    assert len(pprec)==self.shape[0]
-	    raise NotImplementedError
-	    # TODO 
+	elif isinstance(pprec,DiagonalGamma):
+	    self.get_pprec = pprec.get_Ex
+	    assert pprec.dim==self.shape[0]
+	    pprec.addchild(self)
 	elif type(prec)==Wishart:
 	    raise NotImplementedError
 	    # TODO
@@ -280,6 +280,33 @@ class DiagonalGamma:
 	def get_Ex(self):
 		return np.diag(self.qa/self.qb)
 	    
+class Wishart:
+	def __init__(self,dim,v0,w0):
+		self.dim = dim
+		assert w0.shape==(self.dim,self.dim)
+		self.v0 = v0
+		self.w0 = w0
+		self.children = []
+		self.update_v()#initialise qv to correct value
+		#randomly initialise solution (for qw)
+		l = np.random.randn(self.dim,1)#randomly initialise solution
+		self.qw = np.dot(l,l.T)
+		
+	def addchild(self,child):
+		assert child.shape == (self.dim,1)
+		self.children.append(child)
+		self.update_a()
+	def update_a(self):
+		self.qv = self.a0
+		for child in self.children:
+			self.qa += 0.5
+	def update(self):
+		self.qb = self.qb0
+		for child in self.children:
+			self.qb += 0.5*child.pass_down_ExxT() + 0.5*child.get_pExxT() - np.dot(child.pass_down_Ex(),child.get_pmu().T)
+		
+	def get_Ex(self):
+		return 
 	    
 	
 	
