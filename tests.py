@@ -90,7 +90,7 @@ def simple_regression():
 	Ys = []
 	for xx in x:
 		m = nodes.Multiplication(xx.reshape(1,1),A)
-			Ys.append(nodes.Gaussian(1,m+B,noise))
+		Ys.append(nodes.Gaussian(1,m+B,noise))
 	for n,yy in zip(Ys,y):
 		n.observe(yy.reshape(1,1))
 		
@@ -116,7 +116,7 @@ def simple_regression():
 	
 		
 		
-	def simple_PCA():
+def simple_PCA():
 	#Set up a PCA problem. Latent dim must be one for the moment...
 	N = 100
 	d = 8       
