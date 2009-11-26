@@ -78,7 +78,7 @@ def simple_regression():
     x = np.linspace(-1,1,N).reshape(N,1)
     atrue = 0.7
     btrue = 0.3
-    prec_true = 50.#we aren;t going to infer this in this test.
+    prec_true = 10.
     y = atrue*x + btrue + np.random.randn(N,1)*np.sqrt(1./prec_true)
     
     #vreate variable nodes
