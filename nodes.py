@@ -84,13 +84,6 @@ class Constant(Node):
 		
 	
 
-#it's a shame we can;t override the __rmul__ command - when a numpy array gets multiplied by an object with an __rmul__, it passes each of it's elements to that rmul seperately. otherwise we could just do:
-# def __rmul__(self,other):
-#     return Multiplication(other,self)
-#I wonder if there's a way to stop the numpy array from doing this (throw it an error?)
-#
-# brainwave - could add a 'constant' class. 
-
 class Gaussian(Node):
 	""" A node to model a Gaussian random variable
 		
