@@ -222,17 +222,18 @@ if __name__=="__main__":
 	#def linear_system_inference()
 	#Infering the states of a linear dynamic system.
 	# the dimension of the state is 2, the dimension of the observations is 1. There are no inputs.
-	m,c,k,dt = 1,20,1000,1e-5
-	A = np.array([[0,1],[-k/m,0-c/m]])*dt + np.eye(2)
-	Q = np.array([[0.01,0.],[.0,1.]])*np.sqrt(dt)
+	m,c,k,dt = 1,50,2000,1e-4
+	A = np.array([[0,1],[-k/m,1-c/m]])*dt + np.eye(2)
+	Q = np.array([[0.1,0.],[.0,1.]])*np.sqrt(dt)
 	Qchol = np.linalg.cholesky(Q)
 	Qinv = linalg.cho_solve((Qchol,1),np.eye(2))
+	#C = np.array([[0,1]])
 	C = np.random.randn(1,2)
-	R = np.array([[0.5]])
+	R = np.array([[0.01]])
 	Rchol = np.sqrt(R)
 	Rinv = 1./R
 	
-	z0 = np.random.randn(2)  
+	z0 = np.dot(Qchol,np.random.randn(2))
 	T = 500
 	#simulate the system
 	Z = np.zeros((T,2))
@@ -254,13 +255,15 @@ if __name__=="__main__":
 		ynodes[-1].observe(yob.reshape(1,1))
 		
 	#update nodes
-	for i in range(15):
+	for i in range(5):
 		
 		pylab.figure()
 		pylab.title(str(i)+' iters')
 		pylab.plot(Y,'g',linewidth=2,label='observations')
-		pylab.plot(np.hstack([e.qmu for e in znodes]).T,'r',label='inferred states')
+		inferred_states = np.hstack([e.qmu for e in znodes]).T
+		pylab.plot(inferred_states,'r',label='inferred states')
 		pylab.plot(Z,'b',label='true states')
+		pylab.plot(np.dot(inferred_states,C.T),'m',label='smoothed_obs')
 		pylab.legend()
 		
 		for zn in znodes:
