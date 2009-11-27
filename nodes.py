@@ -8,7 +8,7 @@ class ConjugacyError(ValueError):
 	def __init__(self,message):
 		ValueError.__init__(self,message)
 	
-class node:
+class Node:
 	"""base class for a node
 	
 	Arguments
@@ -57,7 +57,7 @@ class node:
 #
 # brainwave - could add a 'constant' class. 
 
-class Gaussian(node):
+class Gaussian(Node):
 	"""oneline description
 		
 	Arguments
@@ -88,7 +88,7 @@ class Gaussian(node):
 	pyvb.node : parent class
 	"""
 	def __init__(self,dim,pmu,pprec):
-		node.__init__(self,(dim,1))
+		Node.__init__(self,(dim,1))
 		#Deal with prior mu parent (pmu)
 		if type(pmu)==np.ndarray:
 			assert pmu.shape==self.shape,"Parent mean array has incorrect dimension"
@@ -184,7 +184,7 @@ class Gaussian(node):
 		else:
 			return self.qprec
 	
-class Addition(node):
+class Addition(Node):
 	"""creates a node by adding two other nodes together (maybe?)
 		
 	Arguments
@@ -214,7 +214,7 @@ class Addition(node):
 		self.x1 = x1
 		self.x2 = x2
 		assert x1.shape == x2.shape, "Bad shapes for addition"
-		node.__init__(self, x1.shape)
+		Node.__init__(self, x1.shape)
 		if type(x1) == np.ndarray:
 			self.get_x1 = lambda : x1
 		else:
@@ -259,14 +259,14 @@ class Addition(node):
 		return self.x1.pass_down_ExxT()+self.x2.pass_down_ExxT() + np.dot(Ex1,Ex2.T) + np.dot(Ex2,Ex1.T)
 	
 
-class Multiplication(node):
+class Multiplication(Node):
 	def __init__(self,x1,x2):
 		
 		m1,n1 = x1.shape
 		m2,n2 = x2.shape
 		assert n1 == m2, "incompatible multiplication dimensions"
 		assert n2 == 1, "right hand object must be a vector"
-		node.__init__(self, (m1,n2))
+		Node.__init__(self, (m1,n2))
 		self.x1 = x1
 		self.x2 = x2
 		if type(x1) == np.ndarray:
@@ -336,14 +336,14 @@ class Multiplication(node):
 		else:
 			raise NotImplementedError, "hstacks, transposes etc are not implememted yet"
 
-class hstack(node):
+class hstack(Node):
 	def __init__(self,parents):
 		assert type(parents)==list
 		dims = [e.shape[0] for e in parents]
 		assert np.all(dims[0]==np.array(dims)),"dimensions incompatible"
 		self.parents = parents
 		shape = (dims[0],len(parents))
-		node.__init__(self, shape)
+		Node.__init__(self, shape)
 		
 	def get_Ex(self):
 		return np.hstack(e.get_Ex() for e in parents)
@@ -351,14 +351,14 @@ class hstack(node):
 	def get_Exxt(self):
 		return # TODO
 	
-class Transpose(node):
+class Transpose(Node):
 	
 	def __init__(self,parent):
 		"""I'm designing this to sit between a Gaussian Node and a multiplication node (for inner products)"""
 		assert isinstance(parent, Gaussian), "Can only transpose Gaussian Nodes..."
 		self.parent = parent
 		shape = self.parent.shape[::-1]
-		node.__init__(self, shape)
+		Node.__init__(self, shape)
 		parent.addChild(self)
 	def pass_down_Ex(self):
 		return self.parent.pass_down_Ex().T
