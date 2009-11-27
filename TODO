@@ -10,5 +10,18 @@ Implement (or think about) a constant class, to allow for __rmul__
 
 Make the tests into a proper tests module
 
+Renaming of the messages (currently pass_up_ex, pass_up_prec, which is a little misleading...)
+
+Sampling from the (variational) posterior - this will involve crawling the network, which means that nodes will need pointers to their parents.
+
+Calculation of the Lower bound
+
+Gaussian Process Prior nodes.
+
+Partially observed nodes (i.e. handle missing data gracefully)
+
+
+
+
 
 
