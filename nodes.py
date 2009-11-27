@@ -22,6 +22,8 @@ class node:
 # def __rmul__(self,other):
 #     return Multiplication(other,self)
 #I wonder if there's a way to stop the numpy array from doing this (throw it an error?)
+#
+# brainwave - could add a 'constant' class. 
     
 class Gaussian(node):
 	def __init__(self,dim,pmu,pprec):
@@ -165,9 +167,11 @@ class Multiplication(node):
 		if type(x1) == np.ndarray:
 			self.get_x1 = lambda : x1
 			self.get_x1x1T = lambda : np.dot(x1,x1.T)
+			self.get_x1Tx1 = lambda : np.dot(x1.T,x1)
 		else:
 			self.get_x1 = x1.pass_down_Ex
 			self.get_x1x1T = x1.pass_down_ExxT
+			self.get_x1Tx1 = x1.pass_down_ExTx
 			x1.addChild(self)
 		if type(x2) == np.ndarray:
 			self.get_x2 = lambda : x2
@@ -184,8 +188,10 @@ class Multiplication(node):
 		if requester is self.x1:
 			if self.x1.shape[1] == 1:#lhs is column: therefore rhs is scalar: easy enough
 				return float(self.get_x2())*sumMu
-			else:
-				raise NotImplementedError,"Objects with width (transposes, hstacks) not supported yet"
+			elif self.x1.shape[0] == 1:#lhs is a transposed vector (or hstacked scalars?)  
+				return self.get_x2().T*float(sumMu)
+			else: #lhs is a matrix!
+				raise NotImplementedError,"Hstack objects not done yet"
 		elif requester is self.x2:
 			return  np.dot(self.get_x1().T,sumMu)
 	
@@ -195,15 +201,21 @@ class Multiplication(node):
 		sumC = sum([e.pass_up_prec(self) for e in self.children])
 		if requester is self.x1:
 			if self.x1.shape[1]==1:# one column (rhs scalar): easy enough
-				x2x2T = self.x2.pass_down_ExxT()# this must be scalar in this case?
+				x2x2T = self.get_x2x2T()# this must be scalar in this case?
 				return sumC*float(x2x2T)
+			elif self.x1.shape[0] == 1:#lhs is a transpose (or hstack of scalars?)
+				return float(sumC)*self.get_x2x2T()
 			else:
 				raise NotImplementedError,"Objects with width (transposes, hstacks) not supported yet"
 		elif requester is self.x2:
 			if self.x1.shape[1]==1:#left object has only one column...
 				x1x1T = self.get_x1x1T()
 				return np.trace(np.dot(x1x1T,sumC))
-			else:
+			elif self.x1.shape[0] == 1:# lhs is transpose (or hstacked scalars)
+				return float(sumC)*self.get_x1Tx1()
+			else:#lhs is a matrix.
+				if type(self.x1) is np.ndarray:
+					return np.dot(self.get_x1().T,np.dot(sumC,self.get_x1()))
 				raise NotImplementedError,"Objects with width (transposes, hstacks) not supported yet"
     
 	def pass_down_Ex(self):
@@ -212,6 +224,9 @@ class Multiplication(node):
 	def pass_down_ExxT(self):
 		if self.x1.shape[1] == 1:#rhs is scalar: this is quite easy
 			return self.get_x1x1T() * float(self.get_x2x2T())
+		elif self.x1.shape[0] == 1:#lhs is transposed vector (or hstacked scalar?)
+			print np.trace(np.dot(self.get_x2x2T(),self.get_x1Tx1()))
+			return np.trace(np.dot(self.get_x2x2T(),self.get_x1Tx1()))
 		else:
 			raise NotImplementedError, "hstacks, transposes etc are not implememted yet"
 
@@ -229,25 +244,26 @@ class hstack(node):
 	def get_Exxt(self):
 		return # TODO
 	
-class transpose(node):
+class Transpose(node):
 	def __init__(self,parent):
 		"""I'm designing this to sit between a Gaussian Node and a multiplication node (for inner products)"""
 		assert isinstance(parent, Gaussian), "Can only transpose Gaussian Nodes..."
 		self.parent = parent
 		self.shape = self.parent.shape[::-1]
 		self.children = []
+		parent.addChild(self)
 	def pass_down_Ex(self):
 		return self.parent.pass_down_Ex().T
 	def pass_down_ExxT(self):
 		return self.parent.pass_down_ExTx()
 	def pass_down_ExTx(self):
 		return self.parent.pass_down_ExxT()
-	def pass_up_prec(self):
+	def pass_up_prec(self,requester):
 		#get messages from the child node(s), undo the transpose nonsense, passup
-		Csum = sum([c.pass_up_prec() for c in self.children])
-		return #? TODO
-	def pass_up_ex(self):
-		return #? TODO
+		Csum = sum([c.pass_up_prec(self) for c in self.children])
+		return Csum # TODO : check this?
+	def pass_up_ex(self,requester):
+		return sum([e.pass_up_ex(self) for e in self.children]).T
 		
 		
 		

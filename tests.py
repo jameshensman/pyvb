@@ -43,6 +43,17 @@ def scalar_multiplication():
 		A2.update()
 		print np.hstack((A1.qmu,A2.qmu)).flatten()
 
+def inner_product():
+	"""tests the transpose class and the multiplication class"""
+	A1 = nodes.Gaussian(3,np.zeros((3,1)),np.eye(3)*0.01)
+	A2 = nodes.Gaussian(3,np.zeros((3,1)),np.eye(3)*0.01)
+	C = nodes.Gaussian(1,nodes.Transpose(A1)*A2,np.eye(1)*10)
+	C.observe(np.array([[3]]))
+	for i in range(5000):
+		A1.update()
+		A2.update()
+		print np.hstack((A1.qmu,A2.qmu)).flatten()
+	
 def vector_addition():
 	A1 = nodes.Gaussian(3,np.zeros((3,1)),np.eye(3)*0.01)
 	A2 = nodes.Gaussian(3,np.zeros((3,1)),np.eye(3)*0.01)
@@ -126,6 +137,37 @@ def simple_regression():
 	pylab.plot(x,y,'r.')
 	pylab.show()
 	
+	
+def multivariate_regression():
+	N = 500
+	dimx = 3 # dimy is one for the moment - not implemented hstacks yet
+	xdata = np.random.rand(N,dimx)
+	atrue = np.random.randn(dimx,1)
+	btrue = np.random.randn(1,1)
+	prec_true = 10.
+	ydata = np.dot(xdata,atrue) + btrue + np.random.randn(N,1)*np.sqrt(1./prec_true)
+	
+	#vreate variable nodes
+	A = nodes.Gaussian(dimx,np.zeros((dimx,1)),np.eye(dimx)*0.001)#Gaussian node with 'fixed' wide prior
+	B = nodes.Gaussian(1,np.zeros((1,1)),np.eye(1)*0.001)#Gaussian node with 'fixed' wide prior
+	noise = nodes.Gamma(1e-3,1e-3)
+	
+	#create (plate of) observation nodes
+	Ys = []
+	for xx in xdata:
+		#m = nodes.Multiplication(xx.reshape(1,dimx),A)
+		m = nodes.Multiplication(nodes.Transpose(A),xx.reshape(dimx,1))
+		Ys.append(nodes.Gaussian(1,m+B,noise))
+	for n,yy in zip(Ys,ydata):
+		n.observe(yy.reshape(1,1))
+		
+	#inference 
+	for i in range(100):
+		A.update()
+		B.update()
+		noise.update()
+		print np.hstack((A.qmu.T,B.qmu)).flatten(),noise.get_Ex(), atrue.flatten(), btrue, prec_true
+	
 		
 		
 def simple_PCA():
@@ -175,6 +217,59 @@ def mean_and_variance_inference():
 	
 	
     
+if __name__=="__main__":
+	#def linear_system_inference()
+	#Infering the states of a linear dynamic system.
+	# the dimension of the state is 2, the dimension of the observations is 1. There are no inputs.
+	m,c,k,dt = 1,20,1000,1e-6
+	A = np.array([[0,1],[-k/m,0-c/m]])*dt + np.eye(2)
+	Q = np.array([[1.,0.1],[.1,1.]])*0.1
+	Qchol = np.linalg.cholesky(Q)
+	C = np.random.randn(1,2)
+	R = np.array([[0.5]])
+	Rchol = np.sqrt(R)
+	
+	z0 = np.random.randn(2)*0.001  + np.array([0,10])
+	T = 500
+	#simulate the system
+	Z = np.zeros((T,2))
+	Y = np.zeros((T,1))
+	Z[0] = z0
+	for ztm1,zt,yt in zip(Z[:-1],Z[1:],Y[1:]):
+		zt[:] = np.dot(A,ztm1) + np.dot(Qchol,np.random.randn(2))
+		yt[:] = np.dot(C,zt) + np.dot(Rchol, np.random.randn())
+		
+		
+	#define nodes
+	znodes = []
+	znodes.append(nodes.Gaussian(2,np.zeros((2,1)),np.eye(2)))
+	for i in range(T-1):
+		znodes.append(nodes.Gaussian(2,nodes.Multiplication(A,znodes[-1]),Q))
+	ynodes = []
+	for zn,yob in zip(znodes,Y):
+		ynodes.append(nodes.Gaussian(1,nodes.Multiplication(C,zn),R))
+		ynodes[-1].observe(yob.reshape(1,1))
+		
+	#update nodes
+	for i in range(5):
+		
+		pylab.figure()
+		pylab.title(str(i)+' iters')
+		pylab.plot(Y,'g',linewidth=2,label='observations')
+		pylab.plot(np.hstack([e.qmu for e in znodes]).T,'r',label='inferred states')
+		pylab.plot(Z,'b',label='true states')
+		pylab.legend()
+		
+		for zn in znodes:
+			zn.update()
+		znodes.reverse()#this doesn;t change any connections!
+		for zn in znodes:
+			zn.update()
+		znodes.reverse()
+	
+	pylab.show()
+	
+	
     
     
     
