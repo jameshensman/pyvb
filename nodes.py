@@ -216,7 +216,8 @@ class Multiplication(node):
 			else:#lhs is a matrix.
 				if type(self.x1) is np.ndarray:
 					return np.dot(self.get_x1().T,np.dot(sumC,self.get_x1()))
-				raise NotImplementedError,"Objects with width (transposes, hstacks) not supported yet"
+				else:
+					raise NotImplementedError,"Objects with width (transposes, hstacks) not supported yet"
     
 	def pass_down_Ex(self):
 		return np.dot(self.get_x1() , self.get_x2())
