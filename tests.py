@@ -222,7 +222,7 @@ if __name__=="__main__":
 	#def linear_system_inference()
 	#Infering the states of a linear dynamic system.
 	# the dimension of the state is 2, the dimension of the observations is 1. There are no inputs.
-	m,c,k,dt = 1,20,1000,1e-4
+	m,c,k,dt = 1,20,1000,1e-5
 	A = np.array([[0,1],[-k/m,0-c/m]])*dt + np.eye(2)
 	Q = np.array([[0.01,0.],[.0,1.]])*np.sqrt(dt)
 	Qchol = np.linalg.cholesky(Q)
@@ -245,7 +245,7 @@ if __name__=="__main__":
 		
 	#define nodes
 	znodes = []
-	znodes.append(nodes.Gaussian(2,np.zeros((2,1)),np.eye(2)*0.1))
+	znodes.append(nodes.Gaussian(2,np.zeros((2,1)),np.eye(2)))
 	for i in range(T-1):
 		znodes.append(nodes.Gaussian(2,nodes.Multiplication(A,znodes[-1]),Qinv))
 	ynodes = []
@@ -254,7 +254,7 @@ if __name__=="__main__":
 		ynodes[-1].observe(yob.reshape(1,1))
 		
 	#update nodes
-	for i in range(5):
+	for i in range(15):
 		
 		pylab.figure()
 		pylab.title(str(i)+' iters')
@@ -265,7 +265,7 @@ if __name__=="__main__":
 		
 		for zn in znodes:
 			zn.update()
-		znodes.reverse()#this doesn;t change any connections!
+		znodes.reverse()#this doesn't change any connections!
 		for zn in znodes:
 			zn.update()
 		znodes.reverse()
