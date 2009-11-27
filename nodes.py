@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2009 James Hensman
+# Copyright 2009 James Hensman and Michael Dewar
 # Licensed under the Gnu General Public license, see COPYING
 import numpy as np
 
@@ -49,6 +49,40 @@ class Node:
 	
 	def __mul__(self,other):
 		return Multiplication(self,other)
+	def __rmul__(self,other):
+		return Multiplication(other,self)
+		
+class Constant(Node):
+	"""A class to model a constant in a Bayesian Network,
+    
+	Arguments
+	----------	
+	value : numpy.array
+    
+	Attributes
+	----------
+    
+	Notes
+	----------
+	Essentially a wrapper around a numpy array. This allows us to  make __mul__ and __rmul__ behave in the way we want.
+	
+	A constant should be the parent of other nodes only.  
+	"""
+	def __init__(self,value):
+		Node.__init__(self,value.shape)
+		self.shape = value.shape
+		self.value = value
+		self.value_xxT = np.dot(value,value.T)
+		self.value_xTx = np.dot(value.T,value)
+	
+	def pass_down_Ex(self):
+		return self.value
+	def pass_down_ExxT(self):
+		return self.value_xxT
+	def pass_down_ExTx(self):
+		return self.value_xTx
+		
+	
 
 #it's a shame we can;t override the __rmul__ command - when a numpy array gets multiplied by an object with an __rmul__, it passes each of it's elements to that rmul seperately. otherwise we could just do:
 # def __rmul__(self,other):
@@ -58,15 +92,15 @@ class Node:
 # brainwave - could add a 'constant' class. 
 
 class Gaussian(Node):
-	"""oneline description
+	""" A node to model a Gaussian random variable
 		
 	Arguments
 	----------
 	dim : int
 		description
-	pmu : array or node(?)
+	pmu : array or node  # TODO adding a 'Constant' class would make this less ambiguous. (I hate 'if' statements) 
 		prior mean
-	pprec : array or node(?)
+	pprec : array or node # TODO as above
 		prior precision matrix
 
 	Attributes
@@ -90,29 +124,24 @@ class Gaussian(Node):
 	def __init__(self,dim,pmu,pprec):
 		Node.__init__(self,(dim,1))
 		#Deal with prior mu parent (pmu)
+		assert pmu.shape==self.shape,"Parent node (or array) has incorrect dimension"
 		if type(pmu)==np.ndarray:
-			assert pmu.shape==self.shape,"Parent mean array has incorrect dimension"
-			self.get_pmu = lambda :pmu
-			self.get_pExxT = lambda : np.dot(pmu,pmu.T)
-		elif sum([isinstance(pmu,e) for e in [Gaussian, Addition, Multiplication]]):
-			assert pmu.shape==self.shape,"Parent mean node has incorrect dimension"
-			self.get_pmu = pmu.pass_down_Ex
-			self.get_pExxT = pmu.pass_down_ExxT
+			self.mean_parent = Constant(pmu)
+		elif sum([isinstance(pmu,e) for e in [Gaussian, Addition, Multiplication,Constant]]):
+			self.mean_parent = pmu
 			pmu.addChild(self)
 		else:
 			raise ConjugacyError,'bad'
 	
 		#Deal with prior precision parent (pprec)
+		assert pprec.shape == (self.shape[0],self.shape[0]), "Parent precision array has incorrect dimension"
 		if type(pprec)==np.ndarray:
-			assert pprec.shape == (self.shape[0],self.shape[0]), \
-				"Parent precision array has incorrect dimension"
-			self.get_pprec = lambda :pprec
+			self.precision_parent = Constant(pprec)
 		elif isinstance(pprec,Gamma):
-			self.get_pprec = lambda : np.eye(self.shape[0])*pprec.get_Ex()
+			self.precision_parent = pprec
 			pprec.addChild(self)
 		elif isinstance(pprec,DiagonalGamma):
-			self.get_pprec = pprec.get_Ex
-			assert pprec.dim==self.shape[0]
+			self.precision_parent = pprec
 			pprec.addchild(self)
 		elif type(prec)==Wishart:
 			raise NotImplementedError
@@ -149,8 +178,8 @@ class Gaussian(Node):
 		if self.observed:
 			return
 		# get parent messages
-		pmu = self.get_pmu()
-		pprec = self.get_pprec()
+		pmu = self.mean_parent.pass_down_Ex()
+		pprec = self.precision_parent.pass_down_Ex()
 		# get Child messages
 		child_exs = [e.pass_up_ex(self) for e in self.children]
 		child_precs = [e.pass_up_prec(self) for e in self.children]
@@ -171,21 +200,27 @@ class Gaussian(Node):
 			return self.obs_xxT
 		else:
 			return np.dot(self.qmu,self.qmu.T) + np.linalg.inv(self.qprec)
+			
+	def pass_down_ExTx(self):
+		if self.observed:
+			return self.obs_xTx
+		else:
+			return np.trace(self.pass_down_ExxT())
 	
 	def pass_up_ex(self,requester):
 		if self.observed:
-			return np.dot(self.get_pprec(),self.obs_value)
+			return np.dot(self.precision_parent.pass_down_Ex(),self.obs_value)
 		else:
 			return np.dot(self.qprec,self.qmu)
 	    
 	def pass_up_prec(self,requester):
 		if self.observed:
-			return self.get_pprec()
+			return self.precision_parent.pass_down_Ex()
 		else:
 			return self.qprec
 	
 class Addition(Node):
-	"""creates a node by adding two other nodes together (maybe?)
+	"""creates a node by adding two other nodes together (or adding a np array to a node. the constant class would be so much less ambiguous...
 		
 	Arguments
 	----------
@@ -211,23 +246,22 @@ class Addition(Node):
 
 	"""
 	def __init__(self,x1,x2):
-		self.x1 = x1
-		self.x2 = x2
 		assert x1.shape == x2.shape, "Bad shapes for addition"
 		Node.__init__(self, x1.shape)
 		if type(x1) == np.ndarray:
-			self.get_x1 = lambda : x1
+			self.x1 = Constant(x1)
 		else:
-			self.get_x1 = self.x1.pass_down_Ex
+			self.x1 = x1
 			x1.addChild(self)
+			
 		if type(x2) == np.ndarray:
-			self.get_x2 = lambda : x2
+			self.x2 = Constant(x2)
 		else:
-			self.get_x2 = self.x2.pass_down_Ex
+			self.x2 = x2
 			x2.addChild(self)
 	    
 	def pass_up_ex(self,requester):
-		"""return the sum of the expected value of the child nodes, minus the 
+		"""Return the 'mu' update message of the child node, modified by the co-parent
 		expected value of the co-parent
 		
 		Arguments
@@ -238,25 +272,38 @@ class Addition(Node):
 		sumMu = sum([e.pass_up_ex(self) for e in self.children])
 		sumC = sum([e.pass_up_prec(self) for e in self.children])
 		if requester is self.x1:
-			return sumMu - np.dot(sumC,self.get_x2())
+			return sumMu - np.dot(sumC,self.x2.pass_down_Ex())
 		elif requester is self.x2:
-			return sumMu - np.dot(sumC,self.get_x1())
+			return sumMu - np.dot(sumC,self.x1.pass_down_Ex())
 	
 	def pass_up_prec(self, requester):
 		"""return the sum of the precision matrices for the children of this
-		node.	
+		node. - This is the 'prec' update message to the parent node.
 		"""
-		# TODO aint no dependence on the argument 'requester'
+		# TODO aint no dependence on the argument 'requester' 
+		#don't do that - pass_up prec is common to all (Gaussian-like) nodes, and some of them need to know the requester.
+		
 		#get prec from children to pass upwards
 		sumC = sum([e.pass_up_prec(self) for e in self.children])
 		return sumC
 	
 	def pass_down_Ex(self):
-		return self.get_x1()+self.get_x2()
+		""" Return the sum of the expected values of the parent nodes
+		
+		Notes
+		----------
+		<A+B> = <A> + <B>
+		"""
+		return self.x1.pass_down_Ex()+self.x2.pass_down_Ex()
     
 	def pass_down_ExxT(self):
-		Ex1,Ex2 = self.get_x1() , self.get_x2()
-		return self.x1.pass_down_ExxT()+self.x2.pass_down_ExxT() + np.dot(Ex1,Ex2.T) + np.dot(Ex2,Ex1.T)
+		"""Return the expected value of the 'outer procuct' of the sum of the parent node
+		
+		Notes
+		----------
+		Is this how I use latex, Mike?
+		$ <(A+B)(A+B)>^\top = <AA^\top> + <BB^\top> + <A><B>^\top + <B><A>^\top $""" 
+		return self.x1.pass_down_ExxT() + self.x2.pass_down_ExxT() + np.dot(self.x1.pass_down_Ex(),self.x2.pass_down_Ex().T) + np.dot(self.x2.pass_down_Ex(), self.x1.pass_down_Ex().T)
 	
 
 class Multiplication(Node):
@@ -378,8 +425,14 @@ class Transpose(Node):
 	
 	    
 class Gamma:
-	"""Gamma does not inherrit from node because it cannot be added, muliplied etc"""
-	def __init__(self,a0,b0):
+	"""
+	A Class to represent a Gamma random variable in a VB network
+	
+	
+
+	Gamma does not inherrit from Node because it cannot be added, muliplied etc"""
+	def __init__(self,dim,a0,b0):
+		self.shape = (dim,dim)
 		self.a0 = a0
 		self.b0 = b0
 		self.children = []
@@ -396,19 +449,20 @@ class Gamma:
 			self.qa += 0.5*child.shape[0]
     
 	def update(self):
-		"""update only the b parameter..."""
+		"""update only the b parameter, since the a parameter can be done is closed form and does not need to be iterated. Note the use of trace() allows for children whose shape is not (1,1)"""
 		self.qb = self.b0
 		for child in self.children:
-			self.qb += 0.5*np.trace(child.pass_down_ExxT()) + 0.5*np.trace(child.get_pExxT()) - np.trace(np.dot(child.pass_down_Ex(),child.get_pmu().T))
+			self.qb += 0.5*np.trace(child.pass_down_ExxT()) + 0.5*np.trace(child.mean_parent.pass_down_ExxT()) - np.trace(np.dot(child.pass_down_Ex(),child.mean_parent.pass_down_Ex().T))
     
-	def get_Ex(self):
-		return self.qa/self.qb
-	
+	def pass_down_Ex(self):
+		return np.eye(self.shape[0])*self.qa/self.qb
+		
 class DiagonalGamma:
+	"""A class to implemet a diagonal prior for a lumtivariate Gaussian. Effectively a series of Gamma distributions"""
 	def __init__(self,dim,a0s,b0s):
-		self.dim = dim
-		assert a0s.size==self.dim
-		assert b0s.size==self.dim
+		self.shape = (dim,dim)
+		assert a0s.size==self.shape[0]
+		assert b0s.size==self.shape[0]
 		self.a0s = a0s.flatten()
 		self.b0s = b0s.flatten()
 		self.children = []
@@ -428,7 +482,7 @@ class DiagonalGamma:
 		for child in self.children:
 			self.qb += 0.5*np.diag(child.pass_down_ExxT()) + 0.5*np.diag(child.get_pExxT()) - np.diag(np.dot(child.pass_down_Ex(),child.get_pmu().T))
 		
-	def get_Ex(self):
+	def pass_down_Ex(self):
 		return np.diag(self.qa/self.qb)
 	    
 class Wishart:
@@ -456,8 +510,8 @@ class Wishart:
 		for child in self.children:
 			self.qb += 0.5*child.pass_down_ExxT() + 0.5*child.get_pExxT() - np.dot(child.pass_down_Ex(),child.get_pmu().T)
 		
-	def get_Ex(self):
-		return 
+	def pass_down_Ex(self):
+		return # TODO
 	    
 	
 	

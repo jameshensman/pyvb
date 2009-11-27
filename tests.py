@@ -108,13 +108,15 @@ def simple_regression():
 	#vreate variable nodes
 	B = nodes.Gaussian(1,np.array([[0]]),np.array([[1e-2]]))#Gaussian node with 'fixed' wide prior
 	A = nodes.Gaussian(1,np.array([[0]]),np.array([[1e-2]]))
-	noise = nodes.Gamma(1e-3,1e-3)
+	noise = nodes.Gamma(1,1e-3,1e-3)
 	
+	#create a list/plate of constant nodes
+	Xs = [nodes.Constant(xx.reshape(1,1)) for xx in x]
+		
 	#create (plate of) observation nodes
 	Ys = []
-	for xx in x:
-		m = nodes.Multiplication(xx.reshape(1,1),A)
-		Ys.append(nodes.Gaussian(1,m+B,noise))
+	for Xnode in Xs:
+		Ys.append(nodes.Gaussian(1,Xnode*A + B,noise))
 	for n,yy in zip(Ys,y):
 		n.observe(yy.reshape(1,1))
 		
@@ -151,7 +153,7 @@ def multivariate_regression():
 	#vreate variable nodes
 	A = nodes.Gaussian(dimx,np.zeros((dimx,1)),np.eye(dimx)*0.001)#Gaussian node with 'fixed' wide prior
 	B = nodes.Gaussian(1,np.zeros((1,1)),np.eye(1)*0.001)#Gaussian node with 'fixed' wide prior
-	noise = nodes.Gamma(1e-3,1e-3)
+	noise = nodes.Gamma(1,1e-3,1e-3)
 	
 	#create (plate of) observation nodes
 	Ys = []
@@ -182,7 +184,7 @@ def simple_PCA():
 	X = np.dot(Z_true,W_true.T) + mu_true.T + np.random.randn(N,d)*np.sqrt(1./prec_true)
 	
 	#create nodes
-	noise = nodes.Gamma(1e-3,1e-3)
+	noise = nodes.Gamma(d,1e-3,1e-3)
 	W = nodes.Gaussian(d,np.zeros((d,1)),np.eye(d)*0.001)
 	Mu = nodes.Gaussian(d,np.zeros((d,1)),np.eye(d)*0.001)
 	Zs = [nodes.Gaussian(1,np.zeros((1,1)),np.eye(1)) for i in range(N)]
@@ -204,7 +206,7 @@ def mean_and_variance_inference():
 	truemu = 1.23
 	true_prec = 5.
 	Xdata = np.random.randn(N,1)*np.sqrt(1./true_prec) + truemu
-	prec = nodes.Gamma(1e-3,1e-3)
+	prec = nodes.Gamma(1,1e-3,1e-3)
 	mu = nodes.Gaussian(1,np.zeros((1,1)),np.array([[1e-3]]))
 	nodes = [nodes.Gaussian(1,mu,prec) for n in range(N)]
 	for n,x in zip(nodes,Xdata):
