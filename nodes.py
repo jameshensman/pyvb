@@ -4,17 +4,49 @@
 import numpy as np
 
 class ConjugacyError(ValueError):
-	"""This does very little at the moment"""
+	
 	def __init__(self,message):
 		ValueError.__init__(self,message)
 	
 class node:
-	def __init__(self):
-		pass
-	def addChild(self,other):
-		self.children.append(other)
+	"""base class for a node
+	
+	Arguments
+	----------	
+	shape : tuple
+		shape of the node
+	
+	Attributes
+	----------
+	children : list
+		A list of the children of this node
+	
+	Notes
+	----------
+	Forgive him, Guido, for he knows not how to capitalise
+
+    References
+	----------
+	C. M. Bishop (2006) Pattern Recognition and Machine Learning
+	"""
+	def __init__(self, shape):
+		self.children = []
+		self.shape = shape
+	
+	def addChild(self,child):
+		"""add a child to this node	
+			
+		Arguments
+		----------
+		child : node
+			child node to add to this node
+		"""
+		self.children.append(child)
+
+	
 	def __add__(self,other):
 		return Addition(self,other)
+	
 	def __mul__(self,other):
 		return Multiplication(self,other)
 
@@ -24,12 +56,39 @@ class node:
 #I wonder if there's a way to stop the numpy array from doing this (throw it an error?)
 #
 # brainwave - could add a 'constant' class. 
-    
+
 class Gaussian(node):
+	"""oneline description
+		
+	Arguments
+	----------
+	dim : int
+		description
+	pmu : array or node(?)
+		prior mean
+	pprec : array or node(?)
+		prior precision matrix
+
+	Attributes
+	----------
+	children : list
+		a list of the children of this node
+	observed : boolean
+		flag to say if this node is observed
+	qmu : 
+		decription
+	qprec : 
+		description
+
+	Notes
+	----------
+
+	See Also
+	--------
+	pyvb.node : parent class
+	"""
 	def __init__(self,dim,pmu,pprec):
-		node.__init__(self)
-		self.shape = (dim,1)
-	
+		node.__init__(self,(dim,1))
 		#Deal with prior mu parent (pmu)
 		if type(pmu)==np.ndarray:
 			assert pmu.shape==self.shape,"Parent mean array has incorrect dimension"
@@ -45,7 +104,8 @@ class Gaussian(node):
 	
 		#Deal with prior precision parent (pprec)
 		if type(pprec)==np.ndarray:
-			assert pprec.shape == (self.shape[0],self.shape[0]),"Parent precision array has incorrect dimension"
+			assert pprec.shape == (self.shape[0],self.shape[0]), \
+				"Parent precision array has incorrect dimension"
 			self.get_pprec = lambda :pprec
 		elif isinstance(pprec,Gamma):
 			self.get_pprec = lambda : np.eye(self.shape[0])*pprec.get_Ex()
@@ -59,8 +119,7 @@ class Gaussian(node):
 			# TODO
 		else:
 			raise ConjugacyError
-	
-		self.children = []
+		
 		self.observed=False
 		
 		#randomly initialize solution...
@@ -68,21 +127,34 @@ class Gaussian(node):
 		self.qprec = np.eye(self.shape[0])*np.random.rand()
 	
 	def observe(self,val):
+		"""assigns an observation to the node
+			
+		Arguments
+		----------
+		val : numpy.array
+			observation vector of the same dimension as the node
+			
+		Notes
+		----------
+		By providing an observation to this node, the attribute `observed`
+		is set to True and is treated appropriately when updating etc.
+		"""
 		assert val.shape == self.shape,"Bad shape for observation data"
-		self.observed=True
+		self.observed = True
 		self.obs_value = val
 		self.obs_xxT = np.dot(val,val.T)
 	
 	def update(self):
+		# don't update this node if it's an observed one
 		if self.observed:
-			return # don't update this node if it's an observed one
-		#get parent messages
+			return
+		# get parent messages
 		pmu = self.get_pmu()
 		pprec = self.get_pprec()
-		#get Child messages
+		# get Child messages
 		child_exs = [e.pass_up_ex(self) for e in self.children]
 		child_precs = [e.pass_up_prec(self) for e in self.children]
-		#here's the calculation
+		# here's the calculation
 		self.qprec = pprec + sum(child_precs) #that's it?
 		#weighted_exs = np.dot(pprec,pmu) + sum([np.dot(c,x) for x,c in zip(child_exs,child_precs)])
 		weighted_exs = np.dot(pprec,pmu) + sum(child_exs)
@@ -113,13 +185,36 @@ class Gaussian(node):
 			return self.qprec
 	
 class Addition(node):
+	"""creates a node by adding two other nodes together (maybe?)
+		
+	Arguments
+	----------
+	x1 : numpy.array or node
+		the first node
+	x2 : numpy.array or node
+		the second node
+
+	Attributes
+	----------
+
+	Notes
+	----------
+
+	See Also
+	--------
+
+	References
+	----------
+
+	Examples
+	--------
+
+	"""
 	def __init__(self,x1,x2):
-		node.__init__(self)
 		self.x1 = x1
 		self.x2 = x2
-		self.children = []
 		assert x1.shape == x2.shape, "Bad shapes for addition"
-		self.shape = x1.shape
+		node.__init__(self, x1.shape)
 		if type(x1) == np.ndarray:
 			self.get_x1 = lambda : x1
 		else:
@@ -132,7 +227,14 @@ class Addition(node):
 			x2.addChild(self)
 	    
 	def pass_up_ex(self,requester):
-		"""return the sum of the expected value of the child nodes, minus the expected value of the co-parent"""
+		"""return the sum of the expected value of the child nodes, minus the 
+		expected value of the co-parent
+		
+		Arguments
+		----------
+		requester : node
+			requester is either parent of this node
+		"""
 		sumMu = sum([e.pass_up_ex(self) for e in self.children])
 		sumC = sum([e.pass_up_prec(self) for e in self.children])
 		if requester is self.x1:
@@ -140,7 +242,11 @@ class Addition(node):
 		elif requester is self.x2:
 			return sumMu - np.dot(sumC,self.get_x1())
 	
-	def pass_up_prec(self,requester):
+	def pass_up_prec(self, requester):
+		"""return the sum of the precision matrices for the children of this
+		node.	
+		"""
+		# TODO aint no dependence on the argument 'requester'
 		#get prec from children to pass upwards
 		sumC = sum([e.pass_up_prec(self) for e in self.children])
 		return sumC
@@ -155,15 +261,14 @@ class Addition(node):
 
 class Multiplication(node):
 	def __init__(self,x1,x2):
-		node.__init__(self)
+		
 		m1,n1 = x1.shape
 		m2,n2 = x2.shape
 		assert n1 == m2, "incompatible multiplication dimensions"
 		assert n2 == 1, "right hand object must be a vector"
-		self.shape = (m1,n2)
+		node.__init__(self, (m1,n2))
 		self.x1 = x1
 		self.x2 = x2
-		self.children = []
 		if type(x1) == np.ndarray:
 			self.get_x1 = lambda : x1
 			self.get_x1x1T = lambda : np.dot(x1,x1.T)
@@ -232,25 +337,27 @@ class Multiplication(node):
 
 class hstack(node):
 	def __init__(self,parents):
-		node.__init__(self)
 		assert type(parents)==list
 		dims = [e.shape[0] for e in parents]
 		assert np.all(dims[0]==np.array(dims)),"dimensions incompatible"
 		self.parents = parents
-		self.shape = (dims[0],len(parents))
-		self.children = []
+		shape = (dims[0],len(parents))
+		node.__init__(self, shape)
+		
 	def get_Ex(self):
 		return np.hstack(e.get_Ex() for e in parents)
+		
 	def get_Exxt(self):
 		return # TODO
 	
 class Transpose(node):
+	
 	def __init__(self,parent):
 		"""I'm designing this to sit between a Gaussian Node and a multiplication node (for inner products)"""
 		assert isinstance(parent, Gaussian), "Can only transpose Gaussian Nodes..."
 		self.parent = parent
-		self.shape = self.parent.shape[::-1]
-		self.children = []
+		shape = self.parent.shape[::-1]
+		node.__init__(self, shape)
 		parent.addChild(self)
 	def pass_down_Ex(self):
 		return self.parent.pass_down_Ex().T
