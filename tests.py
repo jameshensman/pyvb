@@ -125,7 +125,7 @@ def simple_regression():
 		A.update()
 		B.update()
 		noise.update()
-		print np.hstack((A.qmu,B.qmu)).flatten(),noise.get_Ex(), atrue, btrue, prec_true
+		print np.hstack((A.qmu,B.qmu)).flatten(),noise.pass_down_Ex(), atrue, btrue, prec_true
 	
 	#sample from posterior:
 	Nsamples = 100
