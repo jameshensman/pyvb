@@ -235,6 +235,8 @@ if __name__=="__main__":
 	Rchol = np.sqrt(R)
 	Rinv = 1./R
 	
+	
+	
 	z0 = np.dot(Qchol,np.random.randn(2))
 	T = 500
 	#simulate the system
@@ -247,13 +249,17 @@ if __name__=="__main__":
 		
 		
 	#define nodes
-	znodes = []
-	znodes.append(nodes.Gaussian(2,np.zeros((2,1)),np.eye(2)))
+	Anode = nodes.Constant(A)
+	Cnode = nodes.Constant(C)
+	Rnode = nodes.Constant(Rinv)
+	Qnode = nodes.Constant(Qinv)
+	Znodes = []
+	Znodes.append(nodes.Gaussian(2,np.zeros((2,1)),np.eye(2)))
 	for i in range(T-1):
-		znodes.append(nodes.Gaussian(2,nodes.Multiplication(A,znodes[-1]),Qinv))
+		Znodes.append(nodes.Gaussian(2,Anode*Znodes[-1],Qnode))
 	ynodes = []
-	for zn,yob in zip(znodes,Y):
-		ynodes.append(nodes.Gaussian(1,nodes.Multiplication(C,zn),Rinv))
+	for zn,yob in zip(Znodes,Y):
+		ynodes.append(nodes.Gaussian(1,Cnode*zn,Rnode))
 		ynodes[-1].observe(yob.reshape(1,1))
 		
 	#update nodes
@@ -262,18 +268,18 @@ if __name__=="__main__":
 		pylab.figure()
 		pylab.title(str(i)+' iters')
 		pylab.plot(Y,'g',linewidth=2,label='observations')
-		inferred_states = np.hstack([e.qmu for e in znodes]).T
+		inferred_states = np.hstack([e.qmu for e in Znodes]).T
 		pylab.plot(inferred_states,'r',label='inferred states')
 		pylab.plot(Z,'b',label='true states')
 		pylab.plot(np.dot(inferred_states,C.T),'m',label='smoothed_obs')
 		pylab.legend()
 		
-		for zn in znodes:
+		for zn in Znodes:
 			zn.update()
-		znodes.reverse()#this doesn't change any connections!
-		for zn in znodes:
+		Znodes.reverse()#this doesn't change any connections!
+		for zn in Znodes:
 			zn.update()
-		znodes.reverse()
+		Znodes.reverse()
 	
 	pylab.show()
 	

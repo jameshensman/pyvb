@@ -122,7 +122,6 @@ class Gaussian(Node):
 			self.mean_parent = Constant(pmu)
 		elif sum([isinstance(pmu,e) for e in [Gaussian, Addition, Multiplication,Constant]]):
 			self.mean_parent = pmu
-			pmu.addChild(self)
 		else:
 			raise ConjugacyError,'bad'
 	
@@ -130,17 +129,20 @@ class Gaussian(Node):
 		assert pprec.shape == (self.shape[0],self.shape[0]), "Parent precision array has incorrect dimension"
 		if type(pprec)==np.ndarray:
 			self.precision_parent = Constant(pprec)
+		elif isinstance(pprec,Constant):
+			self.precision_parent = pprec
 		elif isinstance(pprec,Gamma):
 			self.precision_parent = pprec
-			pprec.addChild(self)
 		elif isinstance(pprec,DiagonalGamma):
 			self.precision_parent = pprec
-			pprec.addchild(self)
-		elif type(prec)==Wishart:
+		elif type(pprec)==Wishart:
 			raise NotImplementedError
 			# TODO
 		else:
 			raise ConjugacyError
+		
+		self.mean_parent.addChild(self)
+		self.precision_parent.addChild(self)
 		
 		self.observed=False
 		
@@ -339,8 +341,8 @@ class Multiplication(Node):
 			else: #lhs is a matrix!
 				raise NotImplementedError,"Hstack objects not done yet"
 		elif requester is self.x2:
-			#return  np.dot(self.x1.pass_down_Ex().T,sumMu)
-			return  np.dot(self.x1.pass_down_Ex(),sumMu) # TODO is this the source of the Kalman filter problem?
+			return  np.dot(self.x1.pass_down_Ex().T,sumMu)
+			#return  np.dot(self.x1.pass_down_Ex(),sumMu) # TODO is this the source of the Kalman filter problem?
 	
 	
 	def pass_up_prec(self,requester):
@@ -364,7 +366,7 @@ class Multiplication(Node):
 				x1x1T = self.x1.pass_down_ExxT()
 				return np.trace(np.dot(x1x1T,sumC))
 			elif self.x1.shape[0] == 1:# lhs is transpose (or hstacked scalars)
-				return float(sumC)*self.get_x1Tx1()
+				return float(sumC)*self.x1.pass_down_ExTx()
 			else:#lhs is a matrix.
 				if isinstance(self.x1,Constant):
 					return np.dot(self.x1.pass_down_Ex().T,np.dot(sumC,self.x1.pass_down_Ex()))
@@ -378,7 +380,7 @@ class Multiplication(Node):
 		if self.x1.shape[1] == 1:#rhs is scalar: this is quite easy
 			return self.x.pass_down_ExxT() * float(self.x2.pass_down_ExxT())
 		elif self.x1.shape[0] == 1:#lhs is transposed vector (or hstacked scalar?)
-			print np.trace(np.dot(self.get_x2x2T(),self.get_x1Tx1()))
+			#print np.trace(np.dot(self.x2.pass_down_ExxT(),self.x1.pass_down_ExTx()))
 			return np.trace(np.dot(self.x2.pass_down_ExxT(),self.x1.pass_down_ExTx()))
 		else:
 			raise NotImplementedError, "hstacks, transposes etc are not implememted yet"
@@ -392,10 +394,10 @@ class hstack(Node):
 		shape = (dims[0],len(parents))
 		Node.__init__(self, shape)
 		
-	def get_Ex(self):
-		return np.hstack(e.get_Ex() for e in parents)
+	def pass_down_Ex(self):
+		return np.hstack(e.pass_down_Ex() for e in parents)
 		
-	def get_Exxt(self):
+	def pass_down_ExxT(self):
 		return # TODO
 	
 class Transpose(Node):
