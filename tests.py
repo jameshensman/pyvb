@@ -2,6 +2,7 @@
 # Copyright 2009 James Hensman
 # Licensed under the Gnu General Public license, see COPYING
 import numpy as np
+from scipy import linalg
 import pylab
 import nodes
 
@@ -221,15 +222,17 @@ if __name__=="__main__":
 	#def linear_system_inference()
 	#Infering the states of a linear dynamic system.
 	# the dimension of the state is 2, the dimension of the observations is 1. There are no inputs.
-	m,c,k,dt = 1,20,1000,1e-6
+	m,c,k,dt = 1,20,1000,1e-4
 	A = np.array([[0,1],[-k/m,0-c/m]])*dt + np.eye(2)
-	Q = np.array([[1.,0.1],[.1,1.]])*0.1
+	Q = np.array([[0.01,0.],[.0,1.]])*np.sqrt(dt)
 	Qchol = np.linalg.cholesky(Q)
+	Qinv = linalg.cho_solve((Qchol,1),np.eye(2))
 	C = np.random.randn(1,2)
 	R = np.array([[0.5]])
 	Rchol = np.sqrt(R)
+	Rinv = 1./R
 	
-	z0 = np.random.randn(2)*0.001  + np.array([0,10])
+	z0 = np.random.randn(2)  
 	T = 500
 	#simulate the system
 	Z = np.zeros((T,2))
@@ -242,12 +245,12 @@ if __name__=="__main__":
 		
 	#define nodes
 	znodes = []
-	znodes.append(nodes.Gaussian(2,np.zeros((2,1)),np.eye(2)))
+	znodes.append(nodes.Gaussian(2,np.zeros((2,1)),np.eye(2)*0.1))
 	for i in range(T-1):
-		znodes.append(nodes.Gaussian(2,nodes.Multiplication(A,znodes[-1]),Q))
+		znodes.append(nodes.Gaussian(2,nodes.Multiplication(A,znodes[-1]),Qinv))
 	ynodes = []
 	for zn,yob in zip(znodes,Y):
-		ynodes.append(nodes.Gaussian(1,nodes.Multiplication(C,zn),R))
+		ynodes.append(nodes.Gaussian(1,nodes.Multiplication(C,zn),Rinv))
 		ynodes[-1].observe(yob.reshape(1,1))
 		
 	#update nodes
