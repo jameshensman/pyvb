@@ -1,0 +1,14 @@
+Docstrings in the Numpy style.
+
+Documentation generally.
+
+Finish the multiplication node to cope with hstacked matrices
+
+Implement the hstack class
+
+Implement (or think about) a constant class, to allow for __rmul__
+
+Make the tests into a proper tests module
+
+
+
