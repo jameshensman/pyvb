@@ -206,13 +206,15 @@ class Gaussian(Node):
 		if self.observed:
 			return np.dot(self.precision_parent.pass_down_Ex(),self.obs_value)
 		else:
-			return np.dot(self.qprec,self.qmu)
+			return np.dot(self.precision_parent.pass_down_Ex(),self.qmu)
+			#return np.dot(self.qprec,self.qmu)
 	    
 	def pass_up_prec(self,requester):
 		if self.observed:
 			return self.precision_parent.pass_down_Ex()
 		else:
-			return self.qprec
+			return self.precision_parent.pass_down_Ex()
+			#return self.qprec
 	
 class Addition(Node):
 	"""creates a node by adding two other nodes together (or adding a np array to a node).  
@@ -342,7 +344,6 @@ class Multiplication(Node):
 				raise NotImplementedError,"Hstack objects not done yet"
 		elif requester is self.x2:
 			return  np.dot(self.x1.pass_down_Ex().T,sumMu)
-			#return  np.dot(self.x1.pass_down_Ex(),sumMu) # TODO is this the source of the Kalman filter problem?
 	
 	
 	def pass_up_prec(self,requester):

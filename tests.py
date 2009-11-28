@@ -263,7 +263,7 @@ if __name__=="__main__":
 		ynodes[-1].observe(yob.reshape(1,1))
 		
 	#update nodes
-	for i in range(5):
+	for i in range(15):
 		
 		pylab.figure()
 		pylab.title(str(i)+' iters')
