@@ -378,7 +378,7 @@ class Multiplication(Node):
 	
 	def pass_down_ExxT(self):
 		if self.x1.shape[1] == 1:#rhs is scalar: this is quite easy
-			return self.x.pass_down_ExxT() * float(self.x2.pass_down_ExxT())
+			return self.x1.pass_down_ExxT() * float(self.x2.pass_down_ExxT())
 		elif self.x1.shape[0] == 1:#lhs is transposed vector (or hstacked scalar?)
 			#print np.trace(np.dot(self.x2.pass_down_ExxT(),self.x1.pass_down_ExTx()))
 			return np.trace(np.dot(self.x2.pass_down_ExxT(),self.x1.pass_down_ExTx()))
