@@ -231,14 +231,12 @@ if __name__=="__main__":
 	Qinv = linalg.cho_solve((Qchol,1),np.eye(2))
 	#C = np.array([[0,1]])
 	C = np.random.randn(1,2)
-	R = np.array([[0.01]])
+	R = np.array([[.01]])
 	Rchol = np.sqrt(R)
 	Rinv = 1./R
 	
-	
-	
 	z0 = np.dot(Qchol,np.random.randn(2))
-	T = 500
+	T = 5000
 	#simulate the system
 	Z = np.zeros((T,2))
 	Y = np.zeros((T,1))
@@ -263,23 +261,24 @@ if __name__=="__main__":
 		ynodes[-1].observe(yob.reshape(1,1))
 		
 	#update nodes
-	for i in range(15):
-		
-		pylab.figure()
-		pylab.title(str(i)+' iters')
-		pylab.plot(Y,'g',linewidth=2,label='observations')
-		inferred_states = np.hstack([e.qmu for e in Znodes]).T
-		pylab.plot(inferred_states,'r',label='inferred states')
-		pylab.plot(Z,'b',label='true states')
-		pylab.plot(np.dot(inferred_states,C.T),'m',label='smoothed_obs')
-		pylab.legend()
-		
+	for i in range(50):
 		for zn in Znodes:
 			zn.update()
 		Znodes.reverse()#this doesn't change any connections!
 		for zn in Znodes:
 			zn.update()
 		Znodes.reverse()
+		
+		
+	pylab.figure()
+	pylab.title(str(i)+' iters')
+	pylab.plot(Y,'g',linewidth=2,label='observations')
+	inferred_states = np.hstack([e.qmu for e in Znodes]).T
+	pylab.plot(inferred_states,'r',label='inferred states')
+	pylab.plot(Z,'b',label='true states')
+	pylab.plot(np.dot(inferred_states,C.T),'m',label='smoothed_obs')
+	pylab.legend()
+		
 	
 	pylab.show()
 	
