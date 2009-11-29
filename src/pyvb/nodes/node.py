@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 
 class Node:
@@ -226,7 +227,7 @@ class Constant(Node):
 	A constant should be the parent of other nodes only.  
 	"""
 	def __init__(self,value):
-		node.Node.__init__(self,value.shape)
+		Node.__init__(self,value.shape)
 		self.shape = value.shape
 		self.value = value
 		self.value_xxT = np.dot(value,value.T)
