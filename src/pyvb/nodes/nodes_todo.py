@@ -2,20 +2,21 @@
 # Copyright 2009 James Hensman and Michael Dewar
 # Licensed under the Gnu General Public license, see COPYING
 import numpy as np
+import node
 
 class ConjugacyError(ValueError):
 	
 	def __init__(self,message):
 		ValueError.__init__(self,message)	
 	
-class hstack(Node):
+class hstack(node.Node):
 	def __init__(self,parents):
 		assert type(parents)==list
 		dims = [e.shape[0] for e in parents]
 		assert np.all(dims[0]==np.array(dims)),"dimensions incompatible"
 		self.parents = parents
 		shape = (dims[0],len(parents))
-		Node.__init__(self, shape)
+		node.Node.__init__(self, shape)
 		
 	def pass_down_Ex(self):
 		return np.hstack(e.pass_down_Ex() for e in parents)
@@ -23,14 +24,14 @@ class hstack(Node):
 	def pass_down_ExxT(self):
 		return # TODO
 	
-class Transpose(Node):
+class Transpose(node.Node):
 	
 	def __init__(self,parent):
-		"""I'm designing this to sit between a Gaussian Node and a multiplication node (for inner products)"""
-		assert isinstance(parent, Gaussian), "Can only transpose Gaussian Nodes..."
+		"""I'm designing this to sit between a Gaussian node.Node and a multiplication node.Node (for inner products)"""
+		assert isinstance(parent, Gaussian), "Can only transpose Gaussian node.Nodes..."
 		self.parent = parent
 		shape = self.parent.shape[::-1]
-		Node.__init__(self, shape)
+		node.Node.__init__(self, shape)
 		parent.addChild(self)
 	def pass_down_Ex(self):
 		return self.parent.pass_down_Ex().T
@@ -39,7 +40,7 @@ class Transpose(Node):
 	def pass_down_ExTx(self):
 		return self.parent.pass_down_ExxT()
 	def pass_up_prec(self,requester):
-		#get messages from the child node(s), undo the transpose nonsense, passup
+		#get messages from the child node.Node(s), undo the transpose nonsense, passup
 		Csum = sum([c.pass_up_prec(self) for c in self.children])
 		return Csum # TODO : check this?
 	def pass_up_ex(self,requester):
@@ -55,7 +56,7 @@ class Gamma:
 	
 	
 
-	Gamma does not inherrit from Node because it cannot be added, muliplied etc"""
+	Gamma does not inherrit from node.Node because it cannot be added, muliplied etc"""
 	def __init__(self,dim,a0,b0):
 		self.shape = (dim,dim)
 		self.a0 = a0
