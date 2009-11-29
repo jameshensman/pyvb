@@ -4,7 +4,7 @@
 import numpy as np
 from scipy import linalg
 import pylab
-import nodes
+from pyvb import nodes
 
 def simple_mean_inference():
 	truemean = 7.2
