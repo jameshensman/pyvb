@@ -1,8 +1,8 @@
-import node
+from node import *
+from nodes_todo import *
 import numpy as np
-from constant import Constant
 
-class Gaussian(node.Node):
+class Gaussian(Node):
 	""" A node to model a Gaussian random variable
 		
 	Arguments
@@ -33,12 +33,12 @@ class Gaussian(node.Node):
 	pyvb.node : parent class
 	"""
 	def __init__(self,dim,pmu,pprec):
-		node.Node.__init__(self,(dim,1))
+		Node.__init__(self,(dim,1))
 		#Deal with prior mu parent (pmu)
 		assert pmu.shape==self.shape,"Parent node (or array) has incorrect dimension"
 		if type(pmu)==np.ndarray:
 			self.mean_parent = Constant(pmu)
-		elif sum([isinstance(pmu,e) for e in [Gaussian, node.Addition, node.Multiplication,Constant]]):
+		elif sum([isinstance(pmu,e) for e in [Gaussian, Addition, Multiplication, Constant]]):
 			self.mean_parent = pmu
 		else:
 			raise ConjugacyError,'bad'
