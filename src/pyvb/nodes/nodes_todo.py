@@ -39,12 +39,12 @@ class Transpose(node.Node):
 		return self.parent.pass_down_ExTx()
 	def pass_down_ExTx(self):
 		return self.parent.pass_down_ExxT()
-	def pass_up_prec(self,requester):
+	def pass_up_m1(self,requester):
 		#get messages from the child node.Node(s), undo the transpose nonsense, passup
-		Csum = sum([c.pass_up_prec(self) for c in self.children])
+		Csum = sum([c.pass_up_m1(self) for c in self.children])
 		return Csum # TODO : check this?
-	def pass_up_ex(self,requester):
-		return sum([e.pass_up_ex(self) for e in self.children]).T
+	def pass_up_m2(self,requester):
+		return sum([e.pass_up_m2(self) for e in self.children]).T
 		
 		
 		

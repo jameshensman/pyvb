@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from node import *
 from nodes_todo import *
 import numpy as np
@@ -94,42 +95,56 @@ class Gaussian(Node):
 		pmu = self.mean_parent.pass_down_Ex()
 		pprec = self.precision_parent.pass_down_Ex()
 		# get Child messages
-		child_exs = [e.pass_up_ex(self) for e in self.children]
-		child_precs = [e.pass_up_prec(self) for e in self.children]
+		child_m2s = [e.pass_up_m2(self) for e in self.children]
+		child_m1s = [e.pass_up_m1(self) for e in self.children]
 		# here's the calculation
-		self.qprec = pprec + sum(child_precs) #that's it?
+		self.qprec = pprec + sum(child_m1s) #that's it!
 		#weighted_exs = np.dot(pprec,pmu) + sum([np.dot(c,x) for x,c in zip(child_exs,child_precs)])
-		weighted_exs = np.dot(pprec,pmu) + sum(child_exs)
+		weighted_exs = np.dot(pprec,pmu) + sum(child_m2s)
 		self.qmu = np.linalg.solve(self.qprec,weighted_exs)
 	
 	def pass_down_Ex(self):
+		"""Returns the Expected value of this node"""
 		if self.observed:
 			return self.obs_value
 		else:
 			return self.qmu
 	    
 	def pass_down_ExxT(self):
+		"""Returns the expected value of the 'outer' product of this node.
+		
+		Notes
+		----------
+		<x x.T> = <x> <x>.T + \Sigma_x """
 		if self.observed:
 			return self.obs_xxT
 		else:
 			return np.dot(self.qmu,self.qmu.T) + np.linalg.inv(self.qprec)
 			
 	def pass_down_ExTx(self):
+		"""Returns the expected value of the 'inner' product of this node.
+		
+		Notes
+		----------
+		<x.T x> = \textit{tr}(<x x.T>)
+		"""
 		if self.observed:
 			return self.obs_xTx
 		else:
 			return np.trace(self.pass_down_ExxT())
 	
-	def pass_up_ex(self,requester):
+	def pass_up_m1(self,requester):
+		"""pass up the message 'm1'. See the doc for explanation."""
+		#if self.observed:
+			#return self.precision_parent.pass_down_Ex()
+		#else:
+		return self.precision_parent.pass_down_Ex()
+		
+	def pass_up_m2(self,requester):
+		"""pass up the message 'm2'. See the doc for explanation."""
 		if self.observed:
 			return np.dot(self.precision_parent.pass_down_Ex(),self.obs_value)
 		else:
 			return np.dot(self.precision_parent.pass_down_Ex(),self.qmu)
 			#return np.dot(self.qprec,self.qmu)
 	    
-	def pass_up_prec(self,requester):
-		if self.observed:
-			return self.precision_parent.pass_down_Ex()
-		else:
-			return self.precision_parent.pass_down_Ex()
-			#return self.qprec

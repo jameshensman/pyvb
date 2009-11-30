@@ -84,7 +84,7 @@ class Addition(Node):
 		x1.addChild(self)
 		x2.addChild(self)
 
-	def pass_up_ex(self,requester):
+	def pass_up_m2(self,requester):
 		"""Return the 'mu' update message of the child node, modified by the co-parent
 		expected value of the co-parent
 
@@ -93,22 +93,21 @@ class Addition(Node):
 		requester : node
 			requester is either parent of this node
 		"""
-		sumMu = sum([e.pass_up_ex(self) for e in self.children])
-		sumC = sum([e.pass_up_prec(self) for e in self.children])
+		sumMu = sum([e.pass_up_m2(self) for e in self.children])
+		sumC = sum([e.pass_up_m1(self) for e in self.children])
 		if requester is self.x1:
 			return sumMu - np.dot(sumC,self.x2.pass_down_Ex())
 		elif requester is self.x2:
 			return sumMu - np.dot(sumC,self.x1.pass_down_Ex())
 
-	def pass_up_prec(self, requester):
+	def pass_up_m1(self, requester):
 		"""return the sum of the precision matrices for the children of this
-		node. - This is the 'prec' update message to the parent node.
+		node. - This is the 'm1' update message to the parent node.
 		"""
 		# TODO aint no dependence on the argument 'requester' 
-		#careful - pass_up prec is common to all (Gaussian-like) nodes, and some of them need to know the requester.
+		#careful - pass_up_m1 is common to all (Gaussian-like) nodes, and some of them need to know the requester.
 
-		#get prec from children to pass upwards
-		sumC = sum([e.pass_up_prec(self) for e in self.children])
+		sumC = sum([e.pass_up_m1(self) for e in self.children])
 		return sumC
 
 	def pass_down_Ex(self):
@@ -150,35 +149,35 @@ class Multiplication(Node):
 		x1.addChild(self)
 		x2.addChild(self)
 
-	def pass_up_ex(self,requester):
-		""" Pass up the 'mu' message to the parent.
+	def pass_up_m2(self,requester):
+		""" Pass up the 'm1' message to the parent.
 
 		Notes
 		----------
-		1) get the mu message from the child(ren)
+		1) get the m1 message from the child(ren)
 		2) modify my appropriate co-parent
 		3) pass it up the network
 		"""
-		sumMu = sum([e.pass_up_ex(self) for e in self.children])
+		sum_m2 = sum([e.pass_up_m2(self) for e in self.children])
 		if requester is self.x1:
 			if self.x1.shape[1] == 1:#lhs is column: therefore rhs is scalar: easy enough
-				return float(self.x2.pass_down_Ex())*sumMu
+				return float(self.x2.pass_down_Ex())*sum_m2
 			elif self.x1.shape[0] == 1:#lhs is a transposed vector (or hstacked scalars?)  
-				return self.x2.pass_down_Ex().T*float(sumMu)
+				return self.x2.pass_down_Ex().T*float(sum_m2)
 			else: #lhs is a matrix!
 				raise NotImplementedError,"Hstack objects not done yet"
 		elif requester is self.x2:
-			return  np.dot(self.x1.pass_down_Ex().T,sumMu)
+			return  np.dot(self.x1.pass_down_Ex().T,sum_m2)
 
 
-	def pass_up_prec(self,requester):
+	def pass_up_m1(self,requester):
 		"""
 		Pass up the 'prec' message to the requesting parent
 
 		1) get prec message from child(ren)
 		2) modify it by the co-parent
 		3) pass up."""
-		sumC = sum([e.pass_up_prec(self) for e in self.children])
+		sumC = sum([e.pass_up_m1(self) for e in self.children])
 		if requester is self.x1:
 			if self.x1.shape[1]==1:# one column (rhs scalar): easy enough
 				x2x2T = self.x2.pass_down_ExxT()# this must be scalar in this case?
