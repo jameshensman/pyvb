@@ -224,8 +224,8 @@ if __name__=="__main__":
 	#def linear_system_inference()
 	#Infering the states of a linear dynamic system.
 	# the dimension of the state is 2, the dimension of the observations is 1. There are no inputs.
-	m,c,k,dt = 1,50,2000,1e-4
-	A = np.array([[0,1],[-k/m,1-c/m]])*dt + np.eye(2)
+	m,c,k,dt = 1,50,2000,5e-5
+	A = np.array([[0,1],[-k/m,-c/m]])*dt + np.eye(2)
 	Q = np.array([[0.1,0.],[.0,1.]])*np.sqrt(dt)
 	Qchol = np.linalg.cholesky(Q)
 	Qinv = linalg.cho_solve((Qchol,1),np.eye(2))
@@ -236,7 +236,7 @@ if __name__=="__main__":
 	Rinv = 1./R
 	
 	z0 = np.dot(Qchol,np.random.randn(2))
-	T = 5000
+	T = 500
 	#simulate the system
 	Z = np.zeros((T,2))
 	Y = np.zeros((T,1))
@@ -252,22 +252,26 @@ if __name__=="__main__":
 	Rnode = nodes.Constant(Rinv)
 	Qnode = nodes.Constant(Qinv)
 	Znodes = []
+	Ynodes = []
 	Znodes.append(nodes.Gaussian(2,np.zeros((2,1)),np.eye(2)))
-	for i in range(T-1):
+	Ynodes.append(nodes.Gaussian(1,Cnode*Znodes[-1],Rnode))
+	Ynodes[-1].observe(Y[0].reshape(1,1))
+	Znodes[-1].update()#start of KF
+	for i in range(1,T):
 		Znodes.append(nodes.Gaussian(2,Anode*Znodes[-1],Qnode))
-	ynodes = []
-	for zn,yob in zip(Znodes,Y):
-		ynodes.append(nodes.Gaussian(1,Cnode*zn,Rnode))
-		ynodes[-1].observe(yob.reshape(1,1))
+		Ynodes.append(nodes.Gaussian(1,Cnode*Znodes[-1],Rnode))
+		Ynodes[-1].observe(Y[i].reshape(1,1))
+		Znodes[-1].update()#KF?
 		
-	#update nodes
-	for i in range(50):
-		for zn in Znodes:
-			zn.update()
+	#update nodes (smoothing?)
+	niters = 20
+	for i in range(niters):
 		Znodes.reverse()#this doesn't change any connections!
 		for zn in Znodes:
-			zn.update()
+			zn.update()#reverse pass
 		Znodes.reverse()
+		for zn in Znodes:
+			zn.update()#forward pass
 		
 		
 	pylab.figure()
@@ -276,7 +280,7 @@ if __name__=="__main__":
 	inferred_states = np.hstack([e.qmu for e in Znodes]).T
 	pylab.plot(inferred_states,'r',label='inferred states')
 	pylab.plot(Z,'b',label='true states')
-	pylab.plot(np.dot(inferred_states,C.T),'m',label='smoothed_obs')
+	pylab.plot(np.dot(inferred_states,C.T),'m',linewidth=2,label='smoothed_obs')
 	pylab.legend()
 		
 	

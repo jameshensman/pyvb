@@ -56,6 +56,7 @@ class Addition(Node):
 
 	Notes
 	----------
+	numpy assarys are automagically wrapped in a Constant class for convenience
 
 	See Also
 	--------
