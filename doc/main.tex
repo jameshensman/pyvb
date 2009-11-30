@@ -39,13 +39,13 @@ The distribution $q$ is 'optimised' by finding the distribution $q$ which minimi
 That is, the distribution $\qs(A)$ which minimises the KL divergence between $q$ and $p$ can be found by taking the expected value of the joint-log-probability, under the current ($q$) distribution of all other unknown variables. 
 
 \section{Markov blankets}
-In a directed Bayesian network, a node $A$ is dependent only upon its {\em Markov Blanket}: that is it's parents, children, and children's parents. Formally, one can write
+In a directed Bayesian network, a node $A$ is dependent only upon its {\em Markov Blanket}: that is its parents, children, and children's parents. Formally, one can write
 \begin{equation}
 p(A|\partial A,B) = p(A | \partial A)
 \end{equation}
 where $\partial A$ is the Markov blanket of A and B is the set of all other variables.   
 
-This has important consequenses when coding a set of nodes to do implement the VB algorithm: each node must be 'aware' of nodes in his Markov Blanket. Additionall, he must be aware of his {\em relationship} with said nodes. In pyvb, each node instance contains pointers to it's parents, as well as a list of child nodes.  Co-parents (child nodes' other parents) are dealt with either by messages passed from the child nodes, or by {\em operation} nodes, which define how two parent nodes combine to become the parent of a common child (such as by addition).  
+This has important consequenses when coding a set of nodes to do implement the VB algorithm: each node must be 'aware' of nodes in his Markov Blanket. Additionall, he must be aware of his {\em relationship} with said nodes. In pyvb, each node instance contains pointers to its parents, as well as a list of child nodes.  Co-parents (child nodes' other parents) are dealt with either by messages passed from the child nodes, or by {\em operation} nodes, which define how two parent nodes combine to become the parent of a common child (such as by addition).  
 
 \section{Network Structure in pyvb}
 In pyvb, all random variables are represented by an instance of an appropriate class. There are classes for Gaussian nodes, Gamma nodes and Wishart nodes. More random variables are to be implmented in future (see TODO).
@@ -56,7 +56,7 @@ The basic node class, from which Gaussian nodes inherrit, is capable of operatio
 
 Each node then has two 'parents': in a Gaussian node the 'mean\_parent' and 'precision\_parent' attributes are pointers to the apppropriate nodes; in an Addition node the attributes 'x1' and 'x2' are pointers to the two nodes to be added; in the Gamma node the attributes 'a0' and 'b0' are pointers to the appropriate nodes and so on.
 
-We have bastardised the standard nomenclature slightly: strictly a node can have more than two 'true' parents. In our implementation, operation nodes are used to facilitate this. For example, the graphical model of Figure \ref{fig:gm_true_bastard}(a) represents a Gaussian node $C$ and it's three parents $A$,$B$ and $\Lambda_C$.  The diagram in Figure \ref{fig:gm_true_bastard}(b) shows how an operation node (in this case addition) can be used to represent this. 
+We have bastardised the standard nomenclature slightly: strictly a node can have more than two 'true' parents. In our implementation, operation nodes are used to facilitate this. For example, the graphical model of Figure \ref{fig:gm_true_bastard}(a) represents a Gaussian node $C$ and its three parents $A$,$B$ and $\Lambda_C$.  The diagram in Figure \ref{fig:gm_true_bastard}(b) shows how an operation node (in this case addition) can be used to represent this. 
 
 \begin{figure}
 \centering
@@ -121,7 +121,7 @@ In pyvb, this is implemented as follows:
 \begin{enumerate}
 \item Each node has a method 'pass\_down\_Ex', where is returns its expected value. 
 \item Each {\em Gaussian} node has a method 'pass\_up\_m1', which fetches the expected value of its precision parent and returns it.
-\item Each {\em Gaussian} node has a method 'pass\_up\_m2', which fetches the expected value of the precision parent and returns the product of this and its own expected value\footnote{It may seem easier for Gaussian node to pass up it's precision and expected value separately: the adopted convention makes life easier when dealing with operations, as we shall see}. 
+\item Each {\em Gaussian} node has a method 'pass\_up\_m2', which fetches the expected value of the precision parent and returns the product of this and its own expected value\footnote{It may seem easier for Gaussian node to pass up its precision and expected value separately: the adopted convention makes life easier when dealing with operations, as we shall see}. 
 \item Each Gaussian node has a method called 'update', which requests the above messages from parent and child nodes, and applies the suitable linear algebra.
 \end{enumerate}
 
