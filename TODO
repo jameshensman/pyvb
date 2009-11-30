@@ -1,3 +1,4 @@
+[TODO]
 Docstrings in the Numpy style.
 
 Documentation generally.
@@ -6,11 +7,7 @@ Finish the multiplication node to cope with hstacked matrices
 
 Implement the hstack class
 
-Implement (or think about) a constant class, to allow for __rmul__
-
-Make the tests into a proper tests module
-
-Renaming of the messages (currently pass_up_ex, pass_up_prec, which is a little misleading...)
+Make the tests into a proper tests module and examples module
 
 Sampling from the (variational) posterior - this will involve crawling the network, which means that nodes will need pointers to their parents.
 
@@ -20,6 +17,10 @@ Gaussian Process Prior nodes.
 
 Partially observed nodes (i.e. handle missing data gracefully)
 
+
+[DONE]
+Implement (or think about) a constant class, to allow for __rmul__
+Renaming of the messages (currently pass_up_ex, pass_up_prec, which is a little misleading...) [Changed to m1, m2. Also in doc.]
 
 
 
