@@ -128,8 +128,38 @@ class Addition(Node):
 		return self.x1.pass_down_ExxT() + self.x2.pass_down_ExxT() + np.dot(self.x1.pass_down_Ex(),self.x2.pass_down_Ex().T) + np.dot(self.x2.pass_down_Ex(), self.x1.pass_down_Ex().T)
 
 class Multiplication(Node):
-	def __init__(self,x1,x2):
+	"""creates a node by multiplying two other nodes together.  
 
+	Arguments
+	----------
+	x1 : numpy.array or node
+		the first node
+	x2 : numpy.array or node
+		the second node
+		
+
+	Attributes
+	----------
+
+	Notes
+	----------
+	numpy assarys are automagically wrapped in a Constant class for convenience
+
+	See Also
+	--------
+	Addition
+
+	References
+	----------
+
+	Examples
+	--------
+	A = nodes.Gaussian(1,np.random.randn(1,1),np.eye(1))
+	B = nodes.Constant(np,random.randn(1,1)
+	C = A*B# returns an instance if this class
+	
+	"""
+	def __init__(self,x1,x2):
 		m1,n1 = x1.shape
 		m2,n2 = x2.shape
 		assert n1 == m2, "incompatible multiplication dimensions"
@@ -149,11 +179,11 @@ class Multiplication(Node):
 		x2.addChild(self)
 
 	def pass_up_m2(self,requester):
-		""" Pass up the 'm1' message to the parent.
+		""" Pass up the 'm2' message to the parent.
 
 		Notes
 		----------
-		1) get the m1 message from the child(ren)
+		1) get the m2 message from the child(ren)
 		2) modify my appropriate co-parent
 		3) pass it up the network
 		"""
@@ -198,9 +228,21 @@ class Multiplication(Node):
 					raise NotImplementedError,"Objects with width (transposes, hstacks) not supported yet"
 
 	def pass_down_Ex(self):
+		"""Return the expected value of the product of the two parent nodes.
+		
+		Notes
+		----------
+		<AB> = <A><B>
+		"""
 		return np.dot(self.x1.pass_down_Ex() , self.x2.pass_down_Ex())
 
 	def pass_down_ExxT(self):
+		"""Return the Expected value of the 'outer' product of the product of the two parent nodes.
+		
+		Notes
+		----------
+		<(AB)(AB)^\top> = eek. TODO
+		"""
 		if self.x1.shape[1] == 1:#rhs is scalar: this is quite easy
 			return self.x1.pass_down_ExxT() * float(self.x2.pass_down_ExxT())
 		elif self.x1.shape[0] == 1:#lhs is transposed vector (or hstacked scalar?)
