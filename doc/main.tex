@@ -18,14 +18,16 @@
 \maketitle
 
 \section{Bayesian Networks}
+
 \section{Variational Bayes}
-Some directed probabilistic models cannot be solved in closed form. A common approach is to use a Monte Carlo smapling method, (see for example the excellent {\em pymc} project \cite{pymc}).  In the limit of an infinite number of samples, the Monte Carlo method provides perfect inference of the posterior probability density (see any statistics textbook for a proof), and a high number of samples provides an {\em approximation} to the posterior.  
+Some directed probabilistic models cannot be solved in closed form. A common approach is to use a Markov Chain Monte Carlo (MCMC) sampling method, (see for example the excellent {\em pymc} project \cite{pymc}).  In the limit of an infinite number of samples, the MCMC method provides perfect inference of the posterior probability density (see any statistics textbook for a proof), and a high number of samples provides an {\em approximation} to the posterior.  
 
 Similarly in Variation Bayes, we seek an approximation to the posterior given by some {\em factorial} distribution $q$:
 \begin{equation}
 p(A,B,\ldots) \approx q_A(A) q_B(B) \ldots
 \end{equation}
-for convenience, $q_A(A)$ is often written as $q(A)$, etcetera. 
+
+For convenience, $q_A(A)$ is often written as $q(A)$, $q_B(B)$ as $q(B)$ et cetera, since the function can be determined by its argument. 
 
 The distribution $q$ is 'optimised' by finding the distribution $q$ which minimises the KL divergence between $p(A,B,\ldots)$ and $q(A,B,\ldots)$.  After some long and arduous mathematics, \citet{Bishop2006prm} yeilds
 
@@ -33,16 +35,28 @@ The distribution $q$ is 'optimised' by finding the distribution $q$ which minimi
 \ln \qs(A) = \< \ln p(A,B,\ldots)\>_{q(\bar A)}
 \label{eq:basic_VB_update}
 \end{equation}
+
+That is, the distribution $\qs(A)$ which minimises the KL divergence between $q$ and $p$ can be found by taking the expected value of the joint-log-probability, under the current ($q$) distribution of all other unknown variables. 
+
+\section{Markov blankets}
+In a directed Bayesian network, a node $A$ is dependent only upon its {\em Markov Blanket}: that is it's parents, children, and children's parents. Formally, one can write
+\begin{equation}
+p(A|\partial A,B) = p(A | \partial A)
+\end{equation}
+where $\partial A$ is the Markov blanket of A and B is the set of all other variables.   
+
+This has important consequenses when coding a set of nodes to do implement the VB algorithm: each node must be 'aware' of nodes in his Markov Blanket. Additionall, he must be aware of his {\em relationship} with said nodes. In pyvb, each node instance contains pointers to it's parents, as well as a list of child nodes.  Co-parents (child nodes' other parents) are dealt with either by messages passed from the child nodes, or by {\em operation} nodes, which define how two parent nodes combine to become the parent of a common child (such as by addition).  
+
 \section{Network Structure in pyvb}
-In pyvb, all random variables are represented by an instance of an appropriate class. There are classes for Gaussian nodes, Gamma nodes and Wishart nodes. More random variables are to be implmented ion future (see TODO).
+In pyvb, all random variables are represented by an instance of an appropriate class. There are classes for Gaussian nodes, Gamma nodes and Wishart nodes. More random variables are to be implmented in future (see TODO).
 
-Additionally, {\em operations} are represented by instances of classes. There are classes to represent addtion, multiplication and horizontal stacking (hstack).  This gives us an easy way to deal with co-parents.  Some of the code in these classes is quite compicated, since this is where messages are 'modified' according to the operation. 
+Additionally, {\em operations} are represented by instances of classes. There are classes to represent addition, multiplication and horizontal stacking (hstack).  This gives us an easy way to deal with co-parents.  Some of the code in these classes is quite compicated, since this is where messages are 'modified' according to the operation.  
 
-The basic node class, form which Gaussian nodes inherrit, is capable of operations such as addition amd multiplication. This means that one can instantiate a pair of nodes, and then add them using the '+' operator: this creates and returns an instance of the Addition class, with the two original nodes as parents. 
+The basic node class, from which Gaussian nodes inherrit, is capable of operations such as addition amd multiplication. This means that one can instantiate a pair of nodes, and then add them using the '+' operator: this creates and returns an instance of the Addition class, with the two original nodes as parents. 
 
 Each node then has two 'parents': in a Gaussian node the 'mean\_parent' and 'precision\_parent' attributes are pointers to the apppropriate nodes; in an Addition node the attributes 'x1' and 'x2' are pointers to the two nodes to be added; in the Gamma node the attributes 'a0' and 'b0' are pointers to the appropriate nodes and so on.
 
-We have bastardised the standard nomenclature slightly: strictly a node can have more than two 'true' parents. In our implementation, operation nodes are used to facilitate this. For example, the graphical model if Figure \ref{fig:gm_true_bastard}(a) represents a Gaussian node $C$ and it's three parents $A$,$B$ and $\Lambda_C$.  The diagram in Figure \ref{fig:gm_true_bastard}(b) shows how an operation node (in this case addition) can be used to represent this. 
+We have bastardised the standard nomenclature slightly: strictly a node can have more than two 'true' parents. In our implementation, operation nodes are used to facilitate this. For example, the graphical model of Figure \ref{fig:gm_true_bastard}(a) represents a Gaussian node $C$ and it's three parents $A$,$B$ and $\Lambda_C$.  The diagram in Figure \ref{fig:gm_true_bastard}(b) shows how an operation node (in this case addition) can be used to represent this. 
 
 \begin{figure}
 \centering
@@ -63,18 +77,13 @@ We have bastardised the standard nomenclature slightly: strictly a node can have
 \end{figure}
 
 
-
-Each node can have an arbitrary number of children: again, children can be eitherGaussian nodes or operation nodes. 
+Each node can have an arbitrary number of children: again, children can be either Gaussian nodes or operation nodes. 
 
 \fbox{\parbox{0.8\textwidth}{ The node instances are not 'aware' of the nature of the nodes around them in the network. They simply expect to be passed appropriate messages when updating. }}
 
 
-
-
-
-
 \section{A Gaussian Node}
-Consider the simple DAG in Figure \ref{fig:simple_DAG}.  $A$ is the 'mean\_parent' of $B$, and $\Lambda_B$ is the 'precision\_parent' of $B$. That, is, wwe can write the joint probability of the nodes as
+Consider the simple DAG in Figure \ref{fig:simple_DAG}.  $A$ is the 'mean\_parent' of $B$, and $\Lambda_B$ is the 'precision\_parent' of $B$. That, is, one can write the joint probability of the nodes as
 \begin{equation}
 \begin{split}
 p(A,B,\Lambda_B) &= p(A) p(B | A, \Lambda_B) p(\Lambda_B)\\
@@ -96,14 +105,30 @@ It is trivial to write out the log of the joint probability: for convenience, we
 \end{equation}
 where we have followed \cite{Bishop2006prm} in incorporating irrelevant terms into {\em const}.  
 
-We are now ready to apply the variational updates to all othe nodes. Recalling (\ref{eq:basic_VB_update}):
+\subsection{Updating the node}
+We are now ready to apply the variational updates to the node A. Recalling (\ref{eq:basic_VB_update}):
 \begin{equation}
 \begin{split}
--2 \ln \qs (A) &= \big< A^\top\lambda_A A -2A^\top\Lambda_A\mu_A + A^\top\Lambda_B A  - 2A^\top \Lambda_B B \big>\\
- &= A^\top(\Lambda_A + \<\Lambda_B\>)A -2A^\top(\Lambda_A\mu_A + \<\Lambda_B\> \<B\>)
+-2 \ln \qs (A) &= \big< A^\top\lambda_A A -2A^\top\Lambda_A\mu_A + A^\top\Lambda_B A  - 2A^\top \Lambda_B B \big> + \const\\
+ &= A^\top(\Lambda_A + \<\Lambda_B\>)A -2A^\top(\Lambda_A\mu_A + \<\Lambda_B\> \<B\>) + \const
 \end{split}
 \end{equation}
-we recognise this as the log of a Gaussian with precision $\Lambda_A + \<\Lambda_B\>$ and mean $(\Lambda_A + \<\Lambda_B\>)^{-1}(\Lambda_A\mu_A + \<\Lambda_B\> \<B\>)$.  
+This can be recognised as the log of a Gaussian with precision $\Lambda_A + \<\Lambda_B\>$ and mean $(\Lambda_A + \<\Lambda_B\>)^{-1}(\Lambda_A\mu_A + \<\Lambda_B\> \<B\>)$. 
+
+Within the pyvb code, the $\<\Lambda_B\>$ 'message is known as 'm1', and the $\<\Lambda_B\> \<B\>$ message is known as m2: these are the messages which flow 'up' the arrows. 
+
+In pyvb, this is implemented as follows:
+\begin{enumerate}
+\item Each node has a method 'pass\_down\_Ex', where is returns its expected value. 
+\item Each {\em Gaussian} node has a method 'pass\_up\_m1', which fetches the expected value of its precision parent and returns it.
+\item Each {\em Gaussian} node has a method 'pass\_up\_m2', which fetches the expected value of the precision parent and returns the product of this and its own expected value\footnote{It may seem easier for Gaussian node to pass up it's precision and expected value separately: the adopted convention makes life easier when dealing with operations, as we shall see}. 
+\item Each Gaussian node has a method called 'update', which requests the above messages from parent and child nodes, and applies the suitable linear algebra.
+\end{enumerate}
+
+\subsection{Multiple Children}
+If the node $A$ were to have multiple (Gaussian) children, all we need to do is to {\em add up} the messages. So when a node with multiple children needs to update, it simple requests the messages m1 and m2 from each of the children, adds them up and proceeds as before.  
+
+TODO: demonstration/proof.  
 
 
 
