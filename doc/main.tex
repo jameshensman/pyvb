@@ -41,6 +41,24 @@ We're assuming the $A$ is right-multiplied by $B$, i.e. %we have $p(C) = \mathca
 \section{Diagonal Gamma}
 \section{Wishart}
 
+\section{Examples}
+\subsection{Linear Regression}
+\subsection{Principal Component Analysis}
+
+\subsection{Linear Dynamic System}
+In the KF, we do
+\begin{equation}
+p(x_t) = \int p(x_t | x_{t-1}) p(x_t | y_t) p(x_{t-1}) d x_{t-1}
+\end{equation}
+
+In the variational equivalent, we do
+\begin{equation}
+\begin{split}
+\ln q^\star(x_t) &= \int \ln \left( p(x_t | x_{t-1}) p(x_t | y_t) \right) q(x_{t-1}) d x_{t-1}\\
+            &= \left<  \ln  p(x_t | x_{t-1})  + \ln p(x_t | y_t)  \right>_{q(x_{t-1})}
+\end{split}
+\end{equation}
+
 
 \section{Appendix}
 \subsection{The Gaussian Distribution}
