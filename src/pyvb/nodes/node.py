@@ -120,11 +120,10 @@ class Addition(Node):
 		return self.x1.pass_down_Ex()+self.x2.pass_down_Ex()
 
 	def pass_down_ExxT(self):
-		"""Return the expected value of the 'outer procuct' of the sum of the parent node
+		"""Return the expected value of the 'outer procuct' of the sum of the parent nodes
 
 		Notes
 		----------
-		Is this how I use latex, Mike?
 		$ <(A+B)(A+B)>^\top = <AA^\top> + <BB^\top> + <A><B>^\top + <B><A>^\top $""" 
 		return self.x1.pass_down_ExxT() + self.x2.pass_down_ExxT() + np.dot(self.x1.pass_down_Ex(),self.x2.pass_down_Ex().T) + np.dot(self.x2.pass_down_Ex(), self.x1.pass_down_Ex().T)
 
@@ -172,9 +171,9 @@ class Multiplication(Node):
 
 	def pass_up_m1(self,requester):
 		"""
-		Pass up the 'prec' message to the requesting parent
+		Pass up the 'm1' message to the requesting parent
 
-		1) get prec message from child(ren)
+		1) get m1 message from child(ren)
 		2) modify it by the co-parent
 		3) pass up."""
 		sumC = sum([e.pass_up_m1(self) for e in self.children])
