@@ -10,9 +10,9 @@ class Gaussian(Node):
 	----------
 	dim : int
 		description
-	pmu : array or node  # TODO adding a 'Constant' class would make this less ambiguous. (I hate 'if' statements) 
+	pmu : array or node  (arrays get wrapped in a Constant class)
 		prior mean
-	pprec : array or node # TODO as above
+	pprec : array or node 
 		prior precision matrix
 
 	Attributes
