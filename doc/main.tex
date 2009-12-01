@@ -33,7 +33,7 @@ The distribution $q$ is 'optimised' by finding the distribution $q$ which minimi
 
 \begin{equation}
 \ln \qs(A) = \< \ln p(A,B,\ldots)\>_{q(\bar A)}
-\label{eq:basic_VB_update}
+\label{eq:VB_update}
 \end{equation}
 
 That is, the distribution $\qs(A)$ which minimises the KL divergence between $q$ and $p$ can be found by taking the expected value of the joint-log-probability, under the current ($q$) distribution of all other unknown variables. 
@@ -106,7 +106,7 @@ It is trivial to write out the log of the joint probability: for convenience, we
 where we have followed \cite{Bishop2006prm} in incorporating irrelevant terms into {\em const}.  
 
 \subsection{Updating the node}
-We are now ready to apply the variational updates to the node A. Recalling (\ref{eq:basic_VB_update}):
+We are now ready to apply the variational updates to the node A. Recalling (\ref{eq:VB_update}):
 \begin{equation}
 \begin{split}
 -2 \ln \qs (A) &= \big< A^\top\lambda_A A -2A^\top\Lambda_A\mu_A + A^\top\Lambda_B A  - 2A^\top \Lambda_B B \big> + \const\\
@@ -135,14 +135,39 @@ TODO: demonstration/proof.
 \section{Operations}
 \subsection{Addition}
 \subsection{Multiplication}
-Consider the updating of a node $A$, with parent nodes $\mu_A$ and $\Lambda_A$.  A has a child node $C$, with co-parents $\Lambda_C$ and (through multipication) $B$.  The situation is shown in figure \ref{fig:mult_markov}
-note that the nodes $B$,$C$,$\mu_A$ and $\Lambda_A$ form the Markov blanket (is this the correct term? I think so) of A, and so no other information is required for the update - even if the network stretched for many nodes in any direction.  
+\subsubsection{Left Multiplier}
+Consider the updating of a node $A$, with parent nodes $\mu_A$ and $\Lambda_A$.  $A$ has a child node $C$, with co-parents $\Lambda_C$ and (through multipication) $B$.  The situation is shown in Figure \ref{fig:mult_markov}:
+note that the nodes $B$,$C$,$\mu_A$ and $\Lambda_A$ form the Markov blanket of A, and so no other information is required for the update - even if the network stretched for many nodes in any direction.  
 
-We're assuming the $A$ is right-multiplied by $B$, i.e. %we have $p(C) = \mathcal{N}(C | AB, \Lambda_C)$.  The log joint probability is:
-
+We're assuming the $A$ is right-multiplied by $B$, i.e. we have $p(C) = \mathcal{N}(C | AB, \Lambda_C)$.  The log joint probability is:
+	
 \begin{equation}
--2 \log p(.) = 
+%-2 \log p(.) = -2\ln p(A) -2\ln p(B) + (C-AB)^\top\Lambda_C(C-AB)\\ 
+-2 \log p(.) = -2\ln p(A) -2\ln p(B) + C^\top\Lambda_CC + B^\top A^\top \Lambda_C AB -2 C^\top \Lambda_C AB + \const
+\end{equation}.  
+
+Applying the update rule (\ref{eq:VB_update}), we obtain
+\begin{equation}
+-2\ln \qs(A) = -2 \ln p(A) + \< B^\top A^\top \Lambda_C AB -2 C^\top \Lambda_C AB \> + \const
 \end{equation}
+which, as might be expected, is quadratic in A, making $\qs(A)$ a Gaussian. The messages passed to the node $A$ depend on the orientation of $A$ and $B$:
+\begin{enumerate}
+\item $B$ is scalar (meaning $A$ must be a vector to match the size of$\Lambda_C$): m1 becomes $\<\Lambda_C\>\<BB^\top\>$, m2 becomes $\<\Lambda_C\>\<C\>\<B\>$. Since the m1 message received from $C$ is $\<\Lambda_C\>\<C\>$, all that has to be done is to multiply this by $\<B\>$ (which is scalar).
+\item $B$ is a vector, and $A$ is a transposed vector. In this case, $\<C\>$ and $\<\Lambda_C\>$ must be scalar, rendering the order of multiplication unimportant: the messages passed are $\<\Lambda_C\>\<BB^\top\>$ and $\<B\>\<\Lambda_C\>\<C\>$, which is $\<B\>$ times the message m2 from the node $C$.  
+\item $B$ is a vector, and $A$ is a matrix.  In this case, the addition node passes up m1 from $C$ and $\<BB^\top\>$ (which is a matrix) for the hstack node above to deal with (see \ref{hstack}).  
+\end{enumerate}
+
+
+\subsubsection{Right Multiplier}
+In pyvb, the node on the right hand side of any multiplication is constrained to being a vector - either a Gaussian or Constant instance.  
+Consider the same situation as above but for the updating of node $B$.  Figure {??} shows $B$'s Markov blanket. The joint double negative probability is written as:
+\begin{equation}
+-2\ln p(.) = 
+\end{equation}
+
+
+\subsubsection{Child of Multiples}
+The updating of the final node $C$ is simpler than that for its parents. One only requires to know the expected value of $AB$, which is trivial.
 
 
 \begin{figure}
@@ -152,6 +177,14 @@ We're assuming the $A$ is right-multiplied by $B$, i.e. %we have $p(C) = \mathca
 \end{figure}
 
 \subsection{Hstacking}
+\label{hstack}
+Sometimes (often!) it is necessary to involve a matrix operation in our model.  For example, in a Linear Dynamic System, the update to the state is given by multiplying the old state by the state transition matrix $A$ (see \ref{examples:LDS}).  The matrix in question is not nessesarily square, nor non-negative definite. It turns out that an appropriate (and conjugate!) prior of such a matrix is Gaussian. For convenience, we offer the {\em hstack} node, which allows one to create a random matrix with Gaussian priors over the columns.  
+
+\subsubsection{Adding Hstacks}
+This is not supported yet, don't try it!
+
+\subsubsection{Mutiplying Hstacks}
+
 
 \section{Precision Nodes}
 \section{Gamma}
@@ -163,6 +196,7 @@ We're assuming the $A$ is right-multiplied by $B$, i.e. %we have $p(C) = \mathca
 \subsection{Principal Component Analysis}
 
 \subsection{Linear Dynamic System}
+\label{examples:LDS}
 In the KF, we do
 \begin{equation}
 p(x_t) = \int p(x_t | x_{t-1}) p(x_t | y_t) p(x_{t-1}) d x_{t-1}
