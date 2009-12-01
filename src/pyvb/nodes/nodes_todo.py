@@ -11,15 +11,20 @@ class ConjugacyError(ValueError):
 	
 class hstack(node.Node):
 	def __init__(self,parents):
+		dims = [e.shape[0] for e in parents]
+		shape = (dims[0],len(parents))
 		node.Node.__init__(self, shape)
 		assert type(parents)==list
-		dims = [e.shape[0] for e in parents]
 		assert np.all(dims[0]==np.array(dims)),"dimensions incompatible"
 		self.parents = parents
-		self.shape = (dims[0],len(parents))
+		self.shape = shape
+		
+		[e.addChild(self) for e in self.parents]
+		
+		
 		
 	def pass_down_Ex(self):
-		return np.hstack([e.pass_down_Ex() for e in parents])
+		return np.hstack([e.pass_down_Ex() for e in self.parents])
 		
 	def pass_down_ExxT(self):
 		raise NotImplementedError
@@ -28,11 +33,22 @@ class hstack(node.Node):
 		raise NotImplementedError
 		
 	def pass_up_m1(self,requester):
-		Child_m1s = [c.pass_up_m1(self) for c in self.children]
-		raise NotImplementedError
+		#get child m1 messages - each message should be a tuple - the m1 from the (true) child and the xxT from the co-parent
+		Cm1s = [c.pass_up_m1(self) for c in self.children]
+		#requester index
+		i = self.parents.index(requester)
+		return sum([m*float(xxt[i,i]) for m,xxt in Cm1s])
 		
 	def pass_up_m2(self,requester):
-		raise NotImplementedError
+		#get child m1 messages - each message should be a tuple - the m1 from the child and the xxT from the co-parent
+		Cm1s = [c.pass_up_m1(self) for c in self.children]
+		xxtsum = sum([e[1] for e in Cm1s])
+		#get child m2 messages - each message should be a tuple - the m2 from the child and the Ex from the co-parent
+		Cm2s = [c.pass_up_m2(self) for c in self.children]
+		i = self.parents.index(requester)
+		Cm1sum = sum([c[0] for c in Cm1s])# sum of the precision (m1) of the children
+		return  sum([m*float(cop[i]) for m,cop in Cm2s])\
+		- sum([np.dot( Cm1sum,p.pass_down_Ex())*float(xxtsum[i,self.parents.index(p)]) for p in self.parents if not p==requester]) 
 		
 	
 class Transpose(node.Node):

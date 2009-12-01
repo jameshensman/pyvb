@@ -189,12 +189,13 @@ class Multiplication(Node):
 		"""
 		sum_m2 = sum([e.pass_up_m2(self) for e in self.children])
 		if requester is self.x1:
-			if self.x1.shape[1] == 1:#lhs is column: therefore rhs is scalar: easy enough
+			if self.x1.shape[1] == 1:#lhs is column: therefore rhs is scalar - easy enough
 				return float(self.x2.pass_down_Ex())*sum_m2
 			elif self.x1.shape[0] == 1:#lhs is a transposed vector (or hstacked scalars?)  
 				return self.x2.pass_down_Ex().T*float(sum_m2)
-			else: #lhs is a matrix!
-				raise NotImplementedError,"Hstack objects not done yet"
+			else: #lhs is a hstack matrix! Return a tuple and tel it deal with it.
+				return sum_m2,self.x2.pass_down_Ex()
+				
 		elif requester is self.x2:
 			return  np.dot(self.x1.pass_down_Ex().T,sum_m2)
 
@@ -208,24 +209,36 @@ class Multiplication(Node):
 		3) pass up."""
 		sumC = sum([e.pass_up_m1(self) for e in self.children])
 		if requester is self.x1:
+			x2x2T = self.x2.pass_down_ExxT()# this must be scalar in this case?
 			if self.x1.shape[1]==1:# one column (rhs scalar): easy enough
-				x2x2T = self.x2.pass_down_ExxT()# this must be scalar in this case?
 				return sumC*float(x2x2T)
 			elif self.x1.shape[0] == 1:#lhs is a transpose (or hstack of scalars?)
-				return float(sumC)*self.x2.pass_down_ExxT()
-			else:
-				raise NotImplementedError,"Objects with width (transposes, hstacks) not supported yet"
+				return float(sumC)*x2x2T
+			else:#lhs is a matrix. pass up the data for the hstack (or simliar ) instance to deal with
+				return sumC,self.x2.pass_down_ExxT()
 		elif requester is self.x2:
-			if self.x1.shape[1]==1:#left object has only one column...
+			if self.x1.shape[1]==1:#lhs has only one column, rhs is scalar
 				x1x1T = self.x1.pass_down_ExxT()
 				return np.trace(np.dot(x1x1T,sumC))
-			elif self.x1.shape[0] == 1:# lhs is transpose (or hstacked scalars)
+			elif self.x1.shape[0] == 1:# lhs is transpose (or hstacked scalars) : therefore product is scalar
 				return float(sumC)*self.x1.pass_down_ExTx()
 			else:#lhs is a matrix.
 				if isinstance(self.x1,Constant):
 					return np.dot(self.x1.pass_down_Ex().T,np.dot(sumC,self.x1.pass_down_Ex()))
-				else:
-					raise NotImplementedError,"Objects with width (transposes, hstacks) not supported yet"
+				else: #lhs must be a hstack?
+					#need to do <x1.T * sumC * x1>
+					dim = self.x2.shape[0]
+					ret = np.zeros((dim,dim))
+					for i in range(dim):
+						for j in range(dim):
+							if i==j:
+								ret[i,j] = np.trace(np.dot(self.x1.parents[i].pass_down_ExxT(),sumC))
+							else:
+								
+								ret[i,j] = np.trace(np.dot(np.dot(self.x1.parents[i].pass_down_Ex(),self.x1.parents[j].pass_down_Ex().T),sumC))
+					return ret
+					
+					
 
 	def pass_down_Ex(self):
 		"""Return the expected value of the product of the two parent nodes.
@@ -246,10 +259,23 @@ class Multiplication(Node):
 		if self.x1.shape[1] == 1:#rhs is scalar: this is quite easy
 			return self.x1.pass_down_ExxT() * float(self.x2.pass_down_ExxT())
 		elif self.x1.shape[0] == 1:#lhs is transposed vector (or hstacked scalar?)
-			#print np.trace(np.dot(self.x2.pass_down_ExxT(),self.x1.pass_down_ExTx()))
 			return np.trace(np.dot(self.x2.pass_down_ExxT(),self.x1.pass_down_ExTx()))
 		else:
-			raise NotImplementedError, "hstacks, transposes etc are not implememted yet"
+			#lhs is matrix.
+			if isinstance(self.x1,Constant):
+				return np.dot(self.x1.pass_down_Ex(),np.dot(self.x2.pass_downExxT(),self.x1.pass_down_Ex()))
+			else:#lhs is hstack
+				x2x2T = self.x2.pass_down_ExxT()
+				dim = self.x1.shape[0]
+				ret = np.zeros((dim,dim))
+				dim2 = x2x2T.shape[0]
+				for i in range(dim2):
+					for j in range(dim2):
+						if i==j:
+							ret += self.x1.parents[i].pass_down_ExxT()*float(x2x2T[i,i])
+						else:
+							ret += np.dot(self.x1.parents[i].pass_down_Ex(),self.x1.parents[j].pass_down_Ex().T)*float(x2x2T[i,j])
+				return ret
 
 class Constant(Node):
 	"""A class to model a constant in a Bayesian Network,

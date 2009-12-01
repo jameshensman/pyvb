@@ -220,8 +220,7 @@ def mean_and_variance_inference():
 	
 	
     
-if __name__=="__main__":
-	#def linear_system_inference()
+def linear_system_inference():
 	#Infering the states of a linear dynamic system.
 	# the dimension of the state is 2, the dimension of the observations is 1. There are no inputs.
 	m,c,k,dt = 1,50,2000,5e-5
@@ -286,6 +285,37 @@ if __name__=="__main__":
 	
 	pylab.show()
 	
+	
+if __name__=='__main__':
+	#Principal component Analysis.
+	q = 2 #latent dimension
+	d = 3 #observation dimension
+	N = 50
+	true_W = np.random.randn(d,q)
+	true_Z = np.random.randn(N,q)
+	true_mean = np.random.randn(d,1)
+	true_prec = 50
+	X_data = np.dot(true_Z,true_W.T) + true_mean.T + np.random.randn(N,d)*np.sqrt(1./true_prec)
+	
+	#set up the problem...
+	Ws = [nodes.Gaussian(d,np.zeros((d,1)),np.eye(d)*1e-6) for  i in range(q)]
+	W = nodes.hstack(Ws)
+	Mu = nodes.Gaussian(d,np.zeros((d,1)),np.eye(d))
+	Beta = nodes.Gamma(d,1e-3,1e-3)
+	Zs = [nodes.Gaussian(q,np.zeros((q,1)),np.eye(q)) for i in range(N)]
+	Xs = [nodes.Gaussian(d,W*z+Mu,Beta) for z in Zs]
+	[xnode.observe(xval.reshape(d,1)) for xnode,xval in zip(Xs,X_data)]
+	
+	#infer!
+	niters = 100
+	for i in range(niters):
+		[w.update() for w in Ws]
+		Mu.update()
+		[z.update() for z in Zs]
+		Beta.update()
+	
+	#plot
+	print np.hstack([W.pass_down_Ex(),true_W])
 	
     
     
