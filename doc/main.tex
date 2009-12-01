@@ -9,11 +9,16 @@
 \usepackage{graphicx}
 \usepackage{natbib}
 
+\setlength{\textwidth}{16cm}
+\setlength{\oddsidemargin}{0cm}
+\setlength{\evensidemargin}{0cm}
+
 \newcommand{\const}{\textit{const.}}
 \newcommand{\tr}{\textit{tr}}
 \newcommand{\qs}{q^\star}
 \newcommand{\<}{\langle}
 \renewcommand{\>}{\rangle}
+\newcommand{\trace}{\textit{tr}}
 \begin{document}
 \maketitle
 
@@ -149,6 +154,7 @@ We're assuming the $A$ is right-multiplied by $B$, i.e. we have $p(C) = \mathcal
 Applying the update rule (\ref{eq:VB_update}), we obtain
 \begin{equation}
 -2\ln \qs(A) = -2 \ln p(A) + \< B^\top A^\top \Lambda_C AB -2 C^\top \Lambda_C AB \> + \const
+\label{eq:mult1}
 \end{equation}
 which, as might be expected, is quadratic in A, making $\qs(A)$ a Gaussian. The messages passed to the node $A$ depend on the orientation of $A$ and $B$:
 \begin{enumerate}
@@ -162,9 +168,22 @@ which, as might be expected, is quadratic in A, making $\qs(A)$ a Gaussian. The 
 In pyvb, the node on the right hand side of any multiplication is constrained to being a vector - either a Gaussian or Constant instance.  
 Consider the same situation as above but for the updating of node $B$.  Figure {??} shows $B$'s Markov blanket. The joint double negative probability is written as:
 \begin{equation}
--2\ln p(.) = 
+-2\ln p(.) = -2\ln p(A) + (B-\mu_B)^\top\Lambda_B(B-\mu_B) + (C-AB)^\top\Lambda_C(C-AB)+\const
+\end{equation}
+multiplying out the brackets and appliying (\ref{eq:VB_update}) yeilds
+\begin{equation}
+\begin{split}
+-2\ln \qs (B) &= \big< B^\top\Lambda_BB -2B^\top\Lambda_B\mu_B +  B^\top A^\top \Lambda_C AB -2 C^\top \Lambda_C AB \big>+ \const\\
+& = B^\top(\<\Lambda_B\> + \<A^\top \Lambda_C A\>)B -2B^\top(\<\Lambda_B\>\<\mu_B\> +\<A^\top\> \<\Lambda_C\>\<C\>) + \const
+\end{split}
 \end{equation}
 
+As is to be expected, the format implies that $\qs(B)$ is Gaussian.  The message m2 is simple: the multiplication node simply needs to fetch the m2 message from $C$ and multiply by $\<A\>$ before returning it to B.  The m1 message is more copmlicated in this case, and some care needs to be taken:
+\begin{enumerate}
+\item $C$ is scalar: the order of multiplication becomes unimportant and the m1 message is simply $\<A^\top A\>\<\Lambda_C\>$.
+\item $A$ is a constant matrix: m1 becomes simply $A^\top \<\Lambda_C\>A$.  
+\item $A$ is a hstacked matrix (see \ref{hstack}). The message m1 becomes a matrix with element $[i,j]$ equal to $\trace(\<A_iA_j^\top\>\<\Lambda_C\>)$, where $A_i$ is the $i^{th}$ column of $A$.    
+\end{enumerate}
 
 \subsubsection{Child of Multiples}
 The updating of the final node $C$ is simpler than that for its parents. One only requires to know the expected value of $AB$, which is trivial.
@@ -184,7 +203,15 @@ Sometimes (often!) it is necessary to involve a matrix operation in our model.  
 This is not supported yet, don't try it!
 
 \subsubsection{Mutiplying Hstacks}
-
+Recall the multiplication case of section \ref{multiplication}.  Where the prior over $A$ is a series of Gaussians over the columns of $A$, equation (\ref{eq:mult1}) becomes
+\begin{equation}
+\begin{split}
+-2\ln \qs(A) &= \bigg<\sum_i \big\{(A_i-\mu_{Ai})^\top \Lambda_{Ai}(A_i-\mu_{Ai})\big\}\bigg> + \< B^\top A^\top \Lambda_C AB -2 C^\top \Lambda_C AB \> + \const\\
+&= \sum_i \big\{ A_i^\top \<\Lambda_{Ai}\> A_i -2 A_i^\top\<\Lambda_{Ai}\>\<\mu_{Ai}\> \big\}  + \sum_i \sum_j \big\{A_i^\top \<\Lambda_C\> A_j \<BB^\top\>_{[i,j]} \big\} -2 \sum_i \<C\>\<\Lambda_C\>A_i \<B\>_{[i]} + \const\\
+&= \sum_i \Bigg\{ A_i^\top \bigg(\<\Lambda_{Ai}\> +  \<\Lambda_C\>  \<BB^\top\>_{[i,i]}\bigg) A_i -2 A_i^\top\bigg(\<\Lambda_{Ai}\>\<\mu_{Ai}\>   - \sum_{j!=i} \big\{ \<\Lambda_C\> \<BB^\top\>_{[i,j]} A_j \big\}\\
+& + \<C\>\<\Lambda_C\>A_i \<B\>_{[i]} \bigg)\Bigg\} + \const
+\end{split}
+\end{equation}
 
 \section{Precision Nodes}
 \section{Gamma}
