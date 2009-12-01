@@ -11,27 +11,37 @@ class ConjugacyError(ValueError):
 	
 class hstack(node.Node):
 	def __init__(self,parents):
+		node.Node.__init__(self, shape)
 		assert type(parents)==list
 		dims = [e.shape[0] for e in parents]
 		assert np.all(dims[0]==np.array(dims)),"dimensions incompatible"
 		self.parents = parents
-		shape = (dims[0],len(parents))
-		node.Node.__init__(self, shape)
+		self.shape = (dims[0],len(parents))
 		
 	def pass_down_Ex(self):
-		return np.hstack(e.pass_down_Ex() for e in parents)
+		return np.hstack([e.pass_down_Ex() for e in parents])
 		
 	def pass_down_ExxT(self):
-		return # TODO
+		raise NotImplementedError
+		
+	def pass_down_ExTx(self):
+		raise NotImplementedError
+		
+	def pass_up_m1(self,requester):
+		Child_m1s = [c.pass_up_m1(self) for c in self.children]
+		raise NotImplementedError
+		
+	def pass_up_m2(self,requester):
+		raise NotImplementedError
+		
 	
 class Transpose(node.Node):
-	
 	def __init__(self,parent):
 		"""I'm designing this to sit between a Gaussian node.Node and a multiplication node.Node (for inner products)"""
 		assert isinstance(parent, Gaussian), "Can only transpose Gaussian node.Nodes..."
-		self.parent = parent
-		shape = self.parent.shape[::-1]
 		node.Node.__init__(self, shape)
+		self.parent = parent
+		self.shape = self.parent.shape[::-1]
 		parent.addChild(self)
 	def pass_down_Ex(self):
 		return self.parent.pass_down_Ex().T
@@ -56,6 +66,8 @@ class Gamma:
 	
 	
 
+	Notes
+	----------
 	Gamma does not inherrit from node.Node because it cannot be added, muliplied etc"""
 	def __init__(self,dim,a0,b0):
 		self.shape = (dim,dim)
@@ -84,7 +96,7 @@ class Gamma:
 		return np.eye(self.shape[0])*self.qa/self.qb
 		
 class DiagonalGamma:
-	"""A class to implemet a diagonal prior for a lumtivariate Gaussian. Effectively a series of Gamma distributions"""
+	"""A class to implemet a diagonal prior for a multivariate (diagonal) Gaussian. Effectively a series of Gamma distributions"""
 	def __init__(self,dim,a0s,b0s):
 		self.shape = (dim,dim)
 		assert a0s.size==self.shape[0]
@@ -112,6 +124,7 @@ class DiagonalGamma:
 		return np.diag(self.qa/self.qb)
 	    
 class Wishart:
+	""" A wishart random variable: the conjugate prior to the precision of a (full) multivariate Gaussian distribution"""
 	def __init__(self,dim,v0,w0):
 		self.dim = dim
 		assert w0.shape==(self.dim,self.dim)
