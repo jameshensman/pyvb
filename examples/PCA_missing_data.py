@@ -45,28 +45,20 @@ def PCA_missing_data(plot=True):
 	#plot
 	if plot:
 		import pylab
+		#compare true and learned W TODO: hinton diagrams
 		Qtrue,Rtrue = np.linalg.qr(true_W)
 		Qlearn,Rlearn = np.linalg.qr(W.pass_down_Ex())
 		pylab.figure();pylab.title('True W')
 		pylab.imshow(Qtrue,interpolation='nearest')
 		pylab.figure();pylab.title('E[W]')
 		pylab.imshow(Qlearn,interpolation='nearest')
-		if q==2:
-			#pylab.figure();pylab.title('true Z')
-			#pylab.scatter(true_Z[:,0],true_Z[:,1],50,true_Z[:,0])
-			#try to rotate the (true and recovered) latent Zs onto each other...
-			true_Z_rot = np.dot(true_Z,Rtrue)
-			learned_Z = np.hstack([z.qmu for z in Zs]).T
-			learned_Z_rot = np.dot(learned_Z,Rlearn)
-			
-			#fiddle with polarity
-			switches = [np.array([1,1]), np.array([-1,1]), np.array([1,-1]),np.array([-1,-1])]
-			switch_index = np.argmin([np.sum(np.square(true_Z_rot-learned_Z_rot*s)) for s in switches])
-			learned_Z_rot = learned_Z_rot*switches[switch_index]
-			
-			pylab.figure();pylab.title('learned Z (true Z translucent) - rotated')
-			pylab.scatter(learned_Z_rot[:,0],learned_Z_rot[:,1],50,true_Z[:,0])
-			pylab.scatter(true_Z_rot[:,0],true_Z_rot[:,1],50,true_Z[:,0],alpha=0.3)
+		
+		if q==2:#plot the latent variables
+			pylab.figure();pylab.title('true Z')
+			pylab.scatter(true_Z[:,0],true_Z[:,1],50,true_Z[:,0])
+			pylab.figure();pylab.title('learned Z')
+			learned_Z = np.hstack([z.pass_down_Ex() for z in Zs]).T
+			pylab.scatter(learned_Z[:,0],learned_Z[:,1],50,true_Z[:,0])
 			
 		#plot recovered X
 		pylab.figure();pylab.title('recovered_signals')
