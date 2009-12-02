@@ -290,8 +290,8 @@ if __name__=='__main__':
 	#Principal Component Analysis.
 	q = 2 #latent dimension
 	d = 7 #observation dimension
-	N = 100
-	niters = 100
+	N = 200
+	niters = 200
 	true_W = np.random.randn(d,q)*10
 	true_Z = np.random.randn(N,q)
 	true_mean = np.random.randn(d,1)
@@ -299,9 +299,9 @@ if __name__=='__main__':
 	X_data = np.dot(true_Z,true_W.T) + true_mean.T + np.random.randn(N,d)*np.sqrt(1./true_prec)
 	
 	#set up the problem...
-	Ws = [nodes.Gaussian(d,np.zeros((d,1)),np.eye(d)*1e-2) for  i in range(q)]
+	Ws = [nodes.Gaussian(d,np.zeros((d,1)),np.eye(d)*1e-3) for  i in range(q)]
 	W = nodes.hstack(Ws)
-	Mu = nodes.Gaussian(d,np.zeros((d,1)),np.eye(d))
+	Mu = nodes.Gaussian(d,np.zeros((d,1)),np.eye(d)*1e-3)
 	Beta = nodes.Gamma(d,1e-3,1e-3)
 	Zs = [nodes.Gaussian(q,np.zeros((q,1)),np.eye(q)) for i in range(N)]
 	Xs = [nodes.Gaussian(d,W*z+Mu,Beta) for z in Zs]

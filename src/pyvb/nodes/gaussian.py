@@ -68,6 +68,7 @@ class Gaussian(Node):
 		#randomly initialize solution...
 		self.qmu = np.random.randn(self.shape[0],1)
 		self.qprec = np.eye(self.shape[0])*np.random.rand()
+		self.qcov = np.linalg.inv(self.qprec)
 	
 	def observe(self,val):
 		"""assigns an observation to the node
@@ -99,9 +100,10 @@ class Gaussian(Node):
 		child_m1s = [e.pass_up_m1(self) for e in self.children]
 		# here's the calculation
 		self.qprec = pprec + sum(child_m1s) #that's it!
+		self.qcov = np.linalg.inv(self.qprec)
 		#weighted_exs = np.dot(pprec,pmu) + sum([np.dot(c,x) for x,c in zip(child_exs,child_precs)])
 		weighted_exs = np.dot(pprec,pmu) + sum(child_m2s)
-		self.qmu = np.linalg.solve(self.qprec,weighted_exs)
+		self.qmu = np.dot(self.qcov,weighted_exs)
 	
 	def pass_down_Ex(self):
 		"""Returns the Expected value of this node"""
@@ -119,7 +121,7 @@ class Gaussian(Node):
 		if self.observed:
 			return self.obs_xxT
 		else:
-			return np.dot(self.qmu,self.qmu.T) + np.linalg.inv(self.qprec)
+			return np.dot(self.qmu,self.qmu.T) + self.qcov
 			
 	def pass_down_ExTx(self):
 		"""Returns the expected value of the 'inner' product of this node.
