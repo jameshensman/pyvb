@@ -3,24 +3,26 @@ Docstrings in the Numpy style.
 
 Documentation generally.
 
-Finish the multiplication node to cope with hstacked matrices
-
-Implement the hstack class
-
 Make the tests into a proper tests module and examples module
 
 Sampling from the (variational) posterior - this will involve crawling the network, which means that nodes will need pointers to their parents.
+[nodes now all have pointers to parents - this should be easy, though perhaps sampler should be a separate module?
 
 Calculation of the Lower bound
+Should this be done *within* the node or should an external module do it?
 
 Gaussian Process Prior nodes.
 
 Partially observed nodes (i.e. handle missing data gracefully)
 
+eliminate corner case where user 'hstacks' scalar Gaussians.
+
 
 [DONE]
 Implement (or think about) a constant class, to allow for __rmul__
 Renaming of the messages (currently pass_up_ex, pass_up_prec, which is a little misleading...) [Changed to m1, m2. Also in doc.]
+Finish the multiplication node to cope with hstacked matrices [there's still a corner case - see above]
+Implement the hstack class
 
 
 
