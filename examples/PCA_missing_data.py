@@ -1,26 +1,27 @@
 # -*- coding: utf-8 -*-
-from pyvb import nodes
 import numpy as np
+import sys
+sys.path.append('../src')
+from pyvb import nodes
+
 def PCA_missing_data(plot=True):
-	#Principal Component Analysis, with arbitrary missing data
+	#Principal Component Analysis, with randomly missing data
 	q = 2 #latent dimension
-	d = 7 #observation dimension
+	d = 3 #observation dimension
 	N = 200
-	niters = 200
-	Nmissing = 10
+	niters = 500
+	Nmissing = 100
 	true_W = np.random.randn(d,q)*10
 	true_Z = np.random.randn(N,q)
 	true_mean = np.random.randn(d,1)
 	true_prec = 100.
-	X_data_full = np.dot(true_Z,true_W.T) + true_mean.T + np.random.randn(N,d)*np.sqrt(1./true_prec)
+	Xdata_full = np.dot(true_Z,true_W.T) + true_mean.T + np.random.randn(N,d)*np.sqrt(1./true_prec)
 	
 	#erase some data
-	missing_index_i = np.argsort(np.random.randn(N))[:nmissing]
-	missing_index_j = np.random.multinomial(1,np.ones(d),nmissing).nonzero()[1]
+	missing_index_i = np.argsort(np.random.randn(N))[:Nmissing]
+	missing_index_j = np.random.multinomial(1,np.ones(d)/d,Nmissing).nonzero()[1]
 	Xdata = Xdata_full.copy()
 	Xdata[missing_index_i,missing_index_j] = np.nan
-	
-	
 	
 	
 	#set up the problem...
@@ -30,31 +31,58 @@ def PCA_missing_data(plot=True):
 	Beta = nodes.Gamma(d,1e-3,1e-3)
 	Zs = [nodes.Gaussian(q,np.zeros((q,1)),np.eye(q)) for i in range(N)]
 	Xs = [nodes.Gaussian(d,W*z+Mu,Beta) for z in Zs]
-	[xnode.observe(xval.reshape(d,1)) for xnode,xval in zip(Xs,X_data)]
+	[xnode.observe(xval.reshape(d,1)) for xnode,xval in zip(Xs,Xdata)]
 	
 	#infer!
 	for i in range(niters):
 		[w.update() for w in Ws]
 		Mu.update()
 		[z.update() for z in Zs]
+		[x.update() for x in Xs]
 		Beta.update()
 		print niters-i
 		
-		#plot
+	#plot
+	if plot:
 		import pylab
+		Qtrue,Rtrue = np.linalg.qr(true_W)
+		Qlearn,Rlearn = np.linalg.qr(W.pass_down_Ex())
 		pylab.figure();pylab.title('True W')
-		pylab.imshow( np.linalg.qr(W.pass_down_Ex())[0],interpolation='nearest')
+		pylab.imshow(Qtrue,interpolation='nearest')
 		pylab.figure();pylab.title('E[W]')
-		pylab.imshow( np.linalg.qr(true_W)[0],interpolation='nearest')
-		pylab.figure();pylab.title('true Z')
-		pylab.scatter(true_Z[:,0],true_Z[:,1],50,true_Z[:,0])
-		pylab.figure();pylab.title('learned Z')
-		learned_Z = np.hstack([z.qmu for z in Zs]).T
-		pylab.scatter(learned_Z[:,0],learned_Z[:,1],50,true_Z[:,0])
+		pylab.imshow(Qlearn,interpolation='nearest')
+		if q==2:
+			#pylab.figure();pylab.title('true Z')
+			#pylab.scatter(true_Z[:,0],true_Z[:,1],50,true_Z[:,0])
+			#try to rotate the (true and recovered) latent Zs onto each other...
+			true_Z_rot = np.dot(true_Z,Rtrue)
+			learned_Z = np.hstack([z.qmu for z in Zs]).T
+			learned_Z_rot = np.dot(learned_Z,Rlearn)
+			
+			#fiddle with polarity
+			switches = [np.array([1,1]), np.array([-1,1]), np.array([1,-1]),np.array([-1,-1])]
+			switch_index = np.argmin([np.sum(np.square(true_Z_rot-learned_Z_rot*s)) for s in switches])
+			learned_Z_rot = learned_Z_rot*switches[switch_index]
+			
+			pylab.figure();pylab.title('learned Z (true Z translucent) - rotated')
+			pylab.scatter(learned_Z_rot[:,0],learned_Z_rot[:,1],50,true_Z[:,0])
+			pylab.scatter(true_Z_rot[:,0],true_Z_rot[:,1],50,true_Z[:,0],alpha=0.3)
+			
+		#plot recovered X
+		pylab.figure();pylab.title('recovered_signals')
+		X_rec = np.hstack([x.pass_down_Ex() for x in Xs]).T
+		pylab.plot(Xdata_full,'g',marker='.',label='True') # 'true' values of missing data
+		pylab.plot(X_rec,'k',label='recovered') # recovered mising data values
+		pylab.plot(Xdata,'b',marker='o',linewidth=2,label='observed') # this will have holes where we took out values
+		pylab.legend()
+		
 		
 		print '\nBeta'
 		print true_prec,Beta.pass_down_Ex()[0,0]
 		print '\nMu'
 		print np.hstack((true_mean,Mu.pass_down_Ex()))
+		pylab.show()
+		
 		
 if __name__=='__main__':
+	PCA_missing_data()
