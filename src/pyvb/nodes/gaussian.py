@@ -119,15 +119,14 @@ class Gaussian(Node):
 		if self.partially_observed:
 			#calculate the posterior probability of q given the observations.
 			#find mean, covariance or observed parts
-			mu_obs = self.qmu[self.obs_index,:]
 			cov_obs = self.qcov.take(self.obs_index,0).take(self.obs_index,1)
 			cov_obs_inv = np.linalg.inv(cov_obs)
 			#find covariance between observed data and all data:
 			cov_obs_all = self.qcov.take(self.obs_index,1)
 			#calculate marginals and set into qcov,qmu and qprec
-			self.qmu += np.dot(cov_obs_all,np.dot(cov_obs_inv,mu_obs-self.qmu[self.obs_index,:]))
+			self.qmu += np.dot(cov_obs_all,np.dot(cov_obs_inv,self.obs_value[self.obs_index,:]-self.qmu[self.obs_index,:]))
 			self.qcov -= np.dot( cov_obs_all,np.dot(cov_obs_inv,cov_obs_all.T))
-			self.qprec = np.linalg.inv(self.qcov)
+			#self.qprec = np.linalg.inv(self.qcov) - not actually needed...
 			
 			
 	
