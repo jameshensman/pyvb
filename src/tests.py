@@ -287,18 +287,19 @@ def linear_system_inference():
 	
 	
 if __name__=='__main__':
-	#Principal component Analysis.
+	#Principal Component Analysis.
 	q = 2 #latent dimension
-	d = 3 #observation dimension
-	N = 50
-	true_W = np.random.randn(d,q)
+	d = 7 #observation dimension
+	N = 100
+	niters = 100
+	true_W = np.random.randn(d,q)*10
 	true_Z = np.random.randn(N,q)
 	true_mean = np.random.randn(d,1)
-	true_prec = 50
+	true_prec = 100.
 	X_data = np.dot(true_Z,true_W.T) + true_mean.T + np.random.randn(N,d)*np.sqrt(1./true_prec)
 	
 	#set up the problem...
-	Ws = [nodes.Gaussian(d,np.zeros((d,1)),np.eye(d)*1e-6) for  i in range(q)]
+	Ws = [nodes.Gaussian(d,np.zeros((d,1)),np.eye(d)*1e-2) for  i in range(q)]
 	W = nodes.hstack(Ws)
 	Mu = nodes.Gaussian(d,np.zeros((d,1)),np.eye(d))
 	Beta = nodes.Gamma(d,1e-3,1e-3)
@@ -307,15 +308,31 @@ if __name__=='__main__':
 	[xnode.observe(xval.reshape(d,1)) for xnode,xval in zip(Xs,X_data)]
 	
 	#infer!
-	niters = 100
 	for i in range(niters):
 		[w.update() for w in Ws]
 		Mu.update()
 		[z.update() for z in Zs]
 		Beta.update()
+		print niters-i
 	
 	#plot
-	print np.hstack([W.pass_down_Ex(),true_W])
+	import pylab
+	pylab.figure();pylab.title('True W')
+	pylab.imshow( np.linalg.qr(W.pass_down_Ex())[0],interpolation='nearest')
+	pylab.figure();pylab.title('E[W]')
+	pylab.imshow( np.linalg.qr(true_W)[0],interpolation='nearest')
+	pylab.figure();pylab.title('true Z')
+	pylab.scatter(true_Z[:,0],true_Z[:,1],50,true_Z[:,0])
+	pylab.figure();pylab.title('learned Z')
+	learned_Z = np.hstack([z.qmu for z in Zs]).T
+	pylab.scatter(learned_Z[:,0],learned_Z[:,1],50,true_Z[:,0])
+	
+	print '\nBeta'
+	print true_prec,Beta.pass_down_Ex()[0,0]
+	print '\nMu'
+	print np.hstack((true_mean,Mu.pass_down_Ex()))
+	
+	
 	
     
     

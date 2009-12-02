@@ -42,13 +42,15 @@ class hstack(node.Node):
 	def pass_up_m2(self,requester):
 		#get child m1 messages - each message should be a tuple - the m1 from the child and the xxT from the co-parent
 		Cm1s = [c.pass_up_m1(self) for c in self.children]
-		xxtsum = sum([e[1] for e in Cm1s])
 		#get child m2 messages - each message should be a tuple - the m2 from the child and the Ex from the co-parent
 		Cm2s = [c.pass_up_m2(self) for c in self.children]
 		i = self.parents.index(requester)
-		Cm1sum = sum([c[0] for c in Cm1s])# sum of the precision (m1) of the children
-		return  sum([m*float(cop[i]) for m,cop in Cm2s])\
-		- sum([np.dot( Cm1sum,p.pass_down_Ex())*float(xxtsum[i,self.parents.index(p)]) for p in self.parents if not p==requester]) 
+		ret = np.zeros((self.shape[0],1))
+		ret += sum([m2*float(cop[i]) for m2,cop in Cm2s])
+		ret -= sum([sum([np.dot(m1*xxt[i,j],self.parents[j].pass_down_Ex()) for j in range(self.shape[1]) if not i==j]) for m1,xxt in Cm1s])
+		return ret
+		#return  sum([m*float(cop[i]) for m,cop in Cm2s])\
+		#- sum([np.dot( Cm1sum,p.pass_down_Ex())*float(xxtsum[i,self.parents.index(p)]) for p in self.parents if not p==requester]) 
 		
 	
 class Transpose(node.Node):
