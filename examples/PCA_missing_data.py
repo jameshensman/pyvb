@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Copyright 2009 James Hensman and Michael Dewar
+# Licensed under the Gnu General Public license, see COPYING
 import numpy as np
 import sys
 sys.path.append('../src')
@@ -11,10 +13,10 @@ def PCA_missing_data(plot=True):
 	N = 200
 	niters = 500
 	Nmissing = 100
-	true_W = np.random.randn(d,q)*10
+	true_W = np.random.randn(d,q)
 	true_Z = np.random.randn(N,q)
 	true_mean = np.random.randn(d,1)
-	true_prec = 100.
+	true_prec = 20.
 	Xdata_full = np.dot(true_Z,true_W.T) + true_mean.T + np.random.randn(N,d)*np.sqrt(1./true_prec)
 	
 	#erase some data
@@ -60,13 +62,29 @@ def PCA_missing_data(plot=True):
 			learned_Z = np.hstack([z.pass_down_Ex() for z in Zs]).T
 			pylab.scatter(learned_Z[:,0],learned_Z[:,1],50,true_Z[:,0])
 			
-		#plot recovered X
-		pylab.figure();pylab.title('recovered_signals')
+		#recovered X mean
 		X_rec = np.hstack([x.pass_down_Ex() for x in Xs]).T
-		pylab.plot(Xdata_full,'g',marker='.',label='True') # 'true' values of missing data
-		pylab.plot(X_rec,'k',label='recovered') # recovered mising data values
-		pylab.plot(Xdata,'b',marker='o',linewidth=2,label='observed') # this will have holes where we took out values
-		pylab.legend()
+		
+		#Recovered X Variance
+		#slight hack here - set q variance of observed nodes to zeros (it should be random...)
+		for x in Xs:
+			if x.observed:
+				x.qcov *=0
+		var_rec = np.vstack([np.diag(x.qcov) for x in Xs]) + 1./np.diag(Beta.pass_down_Ex())
+		
+		#plot each recovered signal in a separate figure
+		for i in range(d):
+			pylab.figure();pylab.title('recovered_signal '+str(i))
+			
+			pylab.plot(Xdata_full[:,i],'g',marker='.',label='True') # 'true' values of missing data
+			pylab.plot(X_rec[:,i],'b',label='Recovered') # recovered mising data values
+			pylab.plot(Xdata[:,i],'k',marker='o',linewidth=2,label='Observed') # this will have holes where we took out values
+			pylab.legend()
+			
+			volume_x = np.hstack((np.arange(len(Xs)),np.arange(len(Xs))[::-1]))
+			volume_y = np.hstack((X_rec[:,i]+2*np.sqrt(var_rec[:,i]), X_rec[:,i][::-1]-2*np.sqrt(var_rec[:,i])[::-1]))
+			pylab.fill(volume_x,volume_y,'b',alpha=0.3)
+			
 		
 		
 		print '\nBeta'

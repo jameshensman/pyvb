@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Copyright 2009 James Hensman and Michael Dewar
+# Licensed under the Gnu General Public license, see COPYING
 import numpy as np
 import sys
 sys.path.append('../src')

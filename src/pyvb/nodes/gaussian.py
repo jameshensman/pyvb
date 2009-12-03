@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# Copyright 2009 James Hensman and Michael Dewar
+# Licensed under the Gnu General Public license, see COPYING
 from node import *
 from nodes_todo import *
 import numpy as np

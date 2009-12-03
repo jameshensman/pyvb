@@ -46,7 +46,7 @@ class hstack(node.Node):
 		Cm2s = [c.pass_up_m2(self) for c in self.children]
 		i = self.parents.index(requester)
 		ret = np.zeros((self.shape[0],1))
-		ret += sum([m2*float(cop[i]) for m2,cop in Cm2s])
+		ret += sum([m2*float(cop[i]) for m2,cop in Cm2s])# TODO Shouldn;t this be in the Multiplication node?
 		ret -= sum([sum([np.dot(m1*xxt[i,j],self.parents[j].pass_down_Ex()) for j in range(self.shape[1]) if not i==j]) for m1,xxt in Cm1s])
 		return ret
 		#return  sum([m*float(cop[i]) for m,cop in Cm2s])\
