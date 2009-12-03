@@ -56,9 +56,8 @@ class Gaussian(Node):
 			self.precision_parent = pprec
 		elif isinstance(pprec,DiagonalGamma):
 			self.precision_parent = pprec
-		elif type(pprec)==Wishart:
-			raise NotImplementedError
-			# TODO
+		elif isinstance(pprec,Wishart):
+			self.precision_parent = pprec
 		else:
 			raise ConjugacyError
 		

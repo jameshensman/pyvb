@@ -125,18 +125,18 @@ class DiagonalGamma:
 		self.update_a()#initialise q to correct value
 		self.qb = np.random.rand()#randomly initialise solution
 		
-	def addchild(self,child):
-		assert child.shape == (self.dim,1)
+	def addChild(self,child):
+		assert child.shape == (self.shape[0],1)
 		self.children.append(child)
 		self.update_a()
 	def update_a(self):
-		self.qa = self.a0
+		self.qa = self.a0s.copy()
 		for child in self.children:
 			self.qa += 0.5
 	def update(self):
-		self.qb = self.qb0
+		self.qb = self.b0s.copy()
 		for child in self.children:
-			self.qb += 0.5*np.diag(child.pass_down_ExxT()) + 0.5*np.diag(child.get_pExxT()) - np.diag(np.dot(child.pass_down_Ex(),child.get_pmu().T))
+			self.qb += 0.5*np.diag(child.pass_down_ExxT()) + 0.5*np.diag(child.mean_parent.pass_down_ExxT()) - np.diag(np.dot(child.pass_down_Ex(),child.mean_parent.pass_down_Ex().T))
 		
 	def pass_down_Ex(self):
 		return np.diag(self.qa/self.qb)
@@ -144,31 +144,33 @@ class DiagonalGamma:
 class Wishart:
 	""" A wishart random variable: the conjugate prior to the precision of a (full) multivariate Gaussian distribution"""
 	def __init__(self,dim,v0,w0):
-		self.dim = dim
-		assert w0.shape==(self.dim,self.dim)
+		self.shape = (dim,dim)
+		assert w0.shape==self.shape
 		self.v0 = v0
 		self.w0 = w0
 		self.children = []
 		self.update_v()#initialise qv to correct value
+		
 		#randomly initialise solution (for qw)
-		l = np.random.randn(self.dim,1)#randomly initialise solution
+		l = np.random.randn(self.shape[0],1)#randomly initialise solution
 		self.qw = np.dot(l,l.T)
 		
-	def addchild(self,child):
-		assert child.shape == (self.dim,1)
+	def addChild(self,child):
+		assert child.shape == (self.shape[0],1)
 		self.children.append(child)
-		self.update_a()
-	def update_a(self):
-		self.qv = self.a0
+		self.update_v()
+		
+	def update_v(self):
+		self.qv = self.v0
 		for child in self.children:
-			self.qa += 0.5
+			self.qv += 0.5
 	def update(self):
-		self.qb = self.qb0
+		self.qw = self.w0
 		for child in self.children:
-			self.qb += 0.5*child.pass_down_ExxT() + 0.5*child.get_pExxT() - np.dot(child.pass_down_Ex(),child.get_pmu().T)
+			self.qw += 0.5*child.pass_down_ExxT() + 0.5*child.mean_parent.pass_down_ExxT() - np.dot(child.pass_down_Ex(),child.mean_parent.pass_down_Ex().T)
 		
 	def pass_down_Ex(self):
-		return # TODO
+		return self.qv*np.linalg.inv(self.qw)
 	    
 	
 	

@@ -9,20 +9,21 @@ from pyvb import nodes
 def PCA_missing_data(plot=True):
 	#Principal Component Analysis, with randomly missing data
 	q = 2 #latent dimension
-	d = 3 #observation dimension
+	d = 10 #observation dimension
 	N = 200
-	niters = 500
+	niters = 1000
 	Nmissing = 100
 	true_W = np.random.randn(d,q)
 	true_Z = np.random.randn(N,q)
 	true_mean = np.random.randn(d,1)
 	true_prec = 20.
-	Xdata_full = np.dot(true_Z,true_W.T) + true_mean.T + np.random.randn(N,d)*np.sqrt(1./true_prec)
+	Xdata_full = np.dot(true_Z,true_W.T) + true_mean.T 
+	Xdata_observed = Xdata_full + np.random.randn(N,d)*np.sqrt(1./true_prec)
 	
 	#erase some data
 	missing_index_i = np.argsort(np.random.randn(N))[:Nmissing]
 	missing_index_j = np.random.multinomial(1,np.ones(d)/d,Nmissing).nonzero()[1]
-	Xdata = Xdata_full.copy()
+	Xdata = Xdata_observed.copy()
 	Xdata[missing_index_i,missing_index_j] = np.nan
 	
 	
@@ -47,13 +48,14 @@ def PCA_missing_data(plot=True):
 	#plot
 	if plot:
 		import pylab
-		#compare true and learned W TODO: hinton diagrams
+		import hinton
+		#compare true and learned W 
 		Qtrue,Rtrue = np.linalg.qr(true_W)
 		Qlearn,Rlearn = np.linalg.qr(W.pass_down_Ex())
 		pylab.figure();pylab.title('True W')
-		pylab.imshow(Qtrue,interpolation='nearest')
+		hinton.hinton(Qtrue)
 		pylab.figure();pylab.title('E[W]')
-		pylab.imshow(Qlearn,interpolation='nearest')
+		hinton.hinton(Qlearn)
 		
 		if q==2:#plot the latent variables
 			pylab.figure();pylab.title('true Z')
@@ -76,9 +78,9 @@ def PCA_missing_data(plot=True):
 		for i in range(d):
 			pylab.figure();pylab.title('recovered_signal '+str(i))
 			
-			pylab.plot(Xdata_full[:,i],'g',marker='.',label='True') # 'true' values of missing data
+			pylab.plot(Xdata_full[:,i],'g',marker='.',label='True') # 'true' values of missing data (without noise)
 			pylab.plot(X_rec[:,i],'b',label='Recovered') # recovered mising data values
-			pylab.plot(Xdata[:,i],'k',marker='o',linewidth=2,label='Observed') # this will have holes where we took out values
+			pylab.plot(Xdata[:,i],'k',marker='o',linewidth=2,label='Observed') # with noise, and holes where we took out values
 			pylab.legend()
 			
 			volume_x = np.hstack((np.arange(len(Xs)),np.arange(len(Xs))[::-1]))
