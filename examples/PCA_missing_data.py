@@ -11,7 +11,7 @@ def PCA_missing_data(plot=True):
 	q = 2 #latent dimension
 	d = 10 #observation dimension
 	N = 200
-	niters = 1000
+	niters = 100
 	Nmissing = 100
 	true_W = np.random.randn(d,q)
 	true_Z = np.random.randn(N,q)
@@ -97,4 +97,4 @@ def PCA_missing_data(plot=True):
 		
 		
 if __name__=='__main__':
-	PCA_missing_data()
+	PCA_missing_data(False)

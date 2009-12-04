@@ -113,8 +113,8 @@ class Gaussian(Node):
 		child_m1s = [e.pass_up_m1(self) for e in self.children]
 		# here's the calculation
 		self.qprec = pprec + sum(child_m1s) #that's it!
-		self.qprec_chol = np.linalg.cholesky(self.qprec)
-		self.qcov = np.linalg.solve(qprec_chol.T,np.linalg.solve(self.qprec_chol,np.eye(self.shape[0])))
+		qprec_chol = np.linalg.cholesky(self.qprec)
+		self.qcov = np.linalg.solve(qprec_chol.T,np.linalg.solve(qprec_chol,np.eye(self.shape[0])))
 		weighted_exs = np.dot(pprec,pmu) + sum(child_m2s)
 		self.qmu = np.dot(self.qcov,weighted_exs)
 		
