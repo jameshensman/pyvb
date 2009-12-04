@@ -50,13 +50,7 @@ class Gaussian(Node):
 		assert pprec.shape == (self.shape[0],self.shape[0]), "Parent precision array has incorrect dimension"
 		if type(pprec)==np.ndarray:
 			self.precision_parent = Constant(pprec)
-		elif isinstance(pprec,Constant):
-			self.precision_parent = pprec
-		elif isinstance(pprec,Gamma):
-			self.precision_parent = pprec
-		elif isinstance(pprec,DiagonalGamma):
-			self.precision_parent = pprec
-		elif isinstance(pprec,Wishart):
+		elif sum([isinstance(pprec,e) for e in Gamma,DiagonalGamma,Wishart,Constant]):
 			self.precision_parent = pprec
 		else:
 			raise ConjugacyError
