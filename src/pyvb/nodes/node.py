@@ -215,67 +215,6 @@ class Multiplication(Node):
 		
 		return m1,m2
 				
-	def pass_up_m2(self,requester):
-		""" Pass up the 'm2' message to the parent.
-
-		Notes
-		----------
-		1) get the m2 message from the child(ren)
-		2) modify my appropriate co-parent
-		3) pass it up the network
-		"""
-		sum_m2 = sum([e.pass_up_m2(self) for e in self.children])
-		if requester is self.A:
-			if self.A.shape[1] == 1:#lhs is column: therefore rhs is scalar - easy enough
-				return float(self.B.pass_down_Ex())*sum_m2
-			elif self.A.shape[0] == 1:#lhs is a transposed vector (or hstacked scalars?)  
-				return self.B.pass_down_Ex().T*float(sum_m2)
-			else: #lhs is a hstack matrix! Return a tuple and tel it deal with it.
-				return sum_m2,self.B.pass_down_Ex()
-				
-		elif requester is self.B:
-			return  np.dot(self.A.pass_down_Ex().T,sum_m2)
-
-
-	def pass_up_m1(self,requester):
-		"""
-		Pass up the 'm1' message to the requesting parent
-
-		1) get m1 message from child(ren)
-		2) modify it by the co-parent
-		3) pass up."""
-		sumC = sum([e.pass_up_m1(self) for e in self.children])
-		if requester is self.A:
-			BBT = self.B.pass_down_ExxT()# this must be scalar in this case?
-			if self.A.shape[1]==1:# one column (rhs scalar): easy enough
-				return sumC*float(BBT)
-			elif self.A.shape[0] == 1:#lhs is a transpose (or hstack of scalars?)
-				return float(sumC)*BBT
-			else:#lhs is a matrix. pass up the data for the hstack (or simliar ) instance to deal with
-				return sumC,self.B.pass_down_ExxT()
-		elif requester is self.B:
-			if self.A.shape[1]==1:#lhs has only one column, rhs is scalar
-				AAT = self.A.pass_down_ExxT()
-				return np.trace(np.dot(AAT,sumC))
-			elif self.A.shape[0] == 1:# lhs is transpose (or hstacked scalars) : therefore product is scalar
-				return float(sumC)*self.A.pass_down_ExTx()
-			else:#lhs is a matrix.
-				if isinstance(self.A,Constant):
-					return np.dot(self.A.pass_down_Ex().T,np.dot(sumC,self.A.pass_down_Ex()))
-				else: #lhs must be a hstack?
-					#need to do <A.T * sumC * A>
-					dim = self.B.shape[0]
-					ret = np.zeros((dim,dim))
-					for i in range(dim):
-						for j in range(dim):
-							if i==j:
-								ret[i,j] = np.trace(np.dot(self.A.parents[i].pass_down_ExxT(),sumC))
-							else:
-								
-								ret[i,j] = np.trace(np.dot(np.dot(self.A.parents[i].pass_down_Ex(),self.A.parents[j].pass_down_Ex().T),sumC))
-					return ret
-					
-					
 
 	def pass_down_Ex(self):
 		"""Return the expected value of the product of the two parent nodes.
