@@ -154,18 +154,4 @@ class Gaussian(Node):
 		pp =  self.precision_parent.pass_down_Ex()
 		return (pp,np.dot(pp,self.qmu))
 		
-	def pass_up_m1(self,requester):
-		"""pass up the message 'm1'. See the doc for explanation."""
-		#if self.observed:
-			#return self.precision_parent.pass_down_Ex()
-		#else:
-		return self.precision_parent.pass_down_Ex()
-		
-	def pass_up_m2(self,requester):
-		"""pass up the message 'm2'. See the doc for explanation."""
-		if self.observed:
-			return np.dot(self.precision_parent.pass_down_Ex(),self.obs_value)
-		else:
-			return np.dot(self.precision_parent.pass_down_Ex(),self.qmu)
-			#return np.dot(self.qprec,self.qmu)
 	    
