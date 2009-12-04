@@ -129,8 +129,8 @@ def simple_regression():
 	
 	#sample from posterior:
 	Nsamples = 100
-	Asamples = np.random.randn(Nsamples,1)*np.sqrt(1./A.qprec) + A.qmu[0]
-	Bsamples = np.random.randn(Nsamples,1)*np.sqrt(1./B.qprec) + B.qmu[0]
+	Asamples = np.random.randn(Nsamples,1)*np.sqrt(A.qcov) + A.qmu[0]
+	Bsamples = np.random.randn(Nsamples,1)*np.sqrt(B.qcov) + B.qmu[0]
 	
 	#plotting
 	xxlin = np.linspace(-1.2,1.2,200)
@@ -286,10 +286,11 @@ def linear_system_inference():
 	pylab.show()
 	
 	
-if __name__=='__main__':
+#if __name__=='__main__':
+def PCA():
 	#Principal Component Analysis.
 	q = 2 #latent dimension
-	d = 7 #observation dimension
+	d = 3 #observation dimension
 	N = 200
 	niters = 200
 	true_W = np.random.randn(d,q)*10

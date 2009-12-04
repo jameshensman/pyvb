@@ -86,32 +86,23 @@ class Addition(Node):
 		A.addChild(self)
 		B.addChild(self)
 
-	def pass_up_m2(self,requester):
-		"""Return the 'mu' update message of the child node, modified by the co-parent
-		expected value of the co-parent
-
+	def pass_up_m1_m2(self,requester):
+		"""Pass up both m1 and m2 messages
+		TODO: proper docstring
+		
 		Arguments
 		----------
 		requester : node
-			requester is either parent of this node
+			requester is either parent of this node (self.A or self.B)
 		"""
-		sumMu = sum([e.pass_up_m2(self) for e in self.children])
-		sumC = sum([e.pass_up_m1(self) for e in self.children])
-		if requester is self.A:
-			return sumMu - np.dot(sumC,self.B.pass_down_Ex())
-		elif requester is self.B:
-			return sumMu - np.dot(sumC,self.A.pass_down_Ex())
-
-	def pass_up_m1(self, requester):
-		"""return the sum of the precision matrices for the children of this
-		node. - This is the 'm1' update message to the parent node.
-		"""
-		# TODO aint no dependence on the argument 'requester' 
-		#careful - pass_up_m1 is common to all (Gaussian-like) nodes, and some of them need to know the requester.
-
-		sumC = sum([e.pass_up_m1(self) for e in self.children])
-		return sumC
-
+		child_messages = [e.pass_up_m1_m2(self) for e in self.children]
+		m1 = np.sum([e[0] for e in child_messages],0)
+		if requester == self.A:
+			m2 = np.sum([e[1] for e in child_messages],0) - np.dot(m1,self.B.pass_down_Ex())
+		else:
+			m2 = np.sum([e[1] for e in child_messages],0) - np.dot(m1,self.A.pass_down_Ex())
+		return (m1,m2)
+		
 	def pass_down_Ex(self):
 		""" Return the sum of the expected values of the parent nodes
 
@@ -180,6 +171,50 @@ class Multiplication(Node):
 		A.addChild(self)
 		B.addChild(self)
 
+	def pass_up_m1_m2(self,requester):
+		"""Pass up both m1 and m2 messages to the requesting aprent
+		
+		Arguments
+		----------
+		requester : node
+			requester is either parent of this node (self.A or self.B)"""
+		child_messages = [e.pass_up_m1_m2(self) for e in self.children]
+		sum_child_m1s = np.sum([e[0] for e in child_messages],0)
+		sum_child_m2s = np.sum([e[1] for e in child_messages],0)
+		
+		if requester is self.A:
+			BBT = self.B.pass_down_ExxT()
+			if self.A.shape[1] == 1:#lhs is column: therefore rhs is scalar - easy enough
+				m1 = sum_child_m1s*float(BBT)
+				m2 =  float(self.B.pass_down_Ex())*sum_child_m2s
+			elif self.A.shape[0] == 1:#lhs is a transposed vector (or hstacked scalars?)  
+				m1 = float(sumC)*BBT
+				m2 =  self.B.pass_down_Ex().T*float(sum_child_m2s)
+			else: #lhs is a hstack matrix! Return a tuple and tel it deal with it.
+				return sum_child_m1s, sum_child_m2s, self.B.pass_down_Ex(), self.B.pass_down_ExxT()
+		else:#requester must be self.B
+			m2 = np.dot(self.A.pass_down_Ex().T,sum_child_m2s)#that was easy :)
+			if self.A.shape[1]==1:#lhs has only one column, rhs is scalar
+				AAT = self.A.pass_down_ExxT()
+				m1 = np.trace(np.dot(AAT,sum_child_m1s))
+			elif self.A.shape[0] == 1:# lhs is transpose (or hstacked scalars) : therefore product is scalar
+				return float(sum_child_m1s)*self.A.pass_down_ExTx()
+			else:#lhs is a matrix - need to do <A.T * sumC * A>
+				if isinstance(self.A,Constant):
+					return np.dot(self.A.pass_down_Ex().T,np.dot(sum_child_m1s,self.A.pass_down_Ex()))
+				else: #lhs must be a hstack?
+					dim = self.B.shape[0]
+					m1 = np.zeros((dim,dim))
+					for i in range(dim):
+						for j in range(dim):
+							if i==j:
+								m1[i,j] = np.trace(np.dot(self.A.parents[i].pass_down_ExxT(),sum_child_m1s))
+							else:
+								
+								m1[i,j] = np.trace(np.dot(np.dot(self.A.parents[i].pass_down_Ex(),self.A.parents[j].pass_down_Ex().T),sum_child_m1s))
+		
+		return m1,m2
+				
 	def pass_up_m2(self,requester):
 		""" Pass up the 'm2' message to the parent.
 

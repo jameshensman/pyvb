@@ -32,6 +32,20 @@ class hstack(node.Node):
 	def pass_down_ExTx(self):
 		raise NotImplementedError
 		
+	def pass_up_m1_m2(self,requester):
+		#child messages consist of m1,m2,b,bbT
+		child_messages = [c.pass_up_m1_m2(self) for c in self.children]
+		
+		i = self.parents.index(requester)
+		
+		#here's m1 - \sum_{children} m1 bbT[i,i]
+		m1 = np.sum([m[0]*float(m[-1][i,i]) for m in child_messages],0) 
+		
+		#here's m2
+		m2 = np.zeros((self.shape[0],1))
+		m2 += sum([m[1]*float(m[2][i]) for m in child_messages])# TODO Shouldn;t this all be in the Multiplication node?
+		m2 -= sum([sum([np.dot(m[0]*m[-1][i,j],self.parents[j].pass_down_Ex()) for j in range(self.shape[1]) if not i==j]) for m in child_messages])
+		return m1,m2
 	def pass_up_m1(self,requester):
 		#get child m1 messages - each message should be a tuple - the m1 from the (true) child and the xxT from the co-parent
 		Cm1s = [c.pass_up_m1(self) for c in self.children]

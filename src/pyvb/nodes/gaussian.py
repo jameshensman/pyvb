@@ -109,7 +109,7 @@ class Gaussian(Node):
 		pmu = self.mean_parent.pass_down_Ex()
 		pprec = self.precision_parent.pass_down_Ex()
 		# get Child messages
-		child_messages = [e.pass_up_m1_m2() for e in self.children]
+		child_messages = [e.pass_up_m1_m2(self) for e in self.children]
 		# here's the calculation
 		qprec = pprec + np.sum([e[0] for e in child_messages],0) #that's it!
 		self.qcov = np.linalg.inv(qprec)
