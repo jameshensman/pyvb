@@ -48,9 +48,9 @@ class Addition(Node):
 
 	Arguments
 	----------
-	x1 : numpy.array or node
+	A : numpy.array or node
 		the first node
-	x2 : numpy.array or node
+	B : numpy.array or node
 		the second node
 
 	Attributes
@@ -70,21 +70,21 @@ class Addition(Node):
 	--------
 
 	"""
-	def __init__(self,x1,x2):
-		assert x1.shape == x2.shape, "Bad shapes for addition"
-		Node.__init__(self, x1.shape)
-		if type(x1) == np.ndarray:
-			self.x1 = Constant(x1)
+	def __init__(self,A,B):
+		assert A.shape == B.shape, "Bad shapes for addition"
+		Node.__init__(self, A.shape)
+		if type(A) == np.ndarray:
+			self.A = Constant(A)
 		else:
-			self.x1 = x1
+			self.A = A
 
-		if type(x2) == np.ndarray:
-			self.x2 = Constant(x2)
+		if type(B) == np.ndarray:
+			self.B = Constant(B)
 		else:
-			self.x2 = x2
+			self.B = B
 
-		x1.addChild(self)
-		x2.addChild(self)
+		A.addChild(self)
+		B.addChild(self)
 
 	def pass_up_m2(self,requester):
 		"""Return the 'mu' update message of the child node, modified by the co-parent
@@ -97,10 +97,10 @@ class Addition(Node):
 		"""
 		sumMu = sum([e.pass_up_m2(self) for e in self.children])
 		sumC = sum([e.pass_up_m1(self) for e in self.children])
-		if requester is self.x1:
-			return sumMu - np.dot(sumC,self.x2.pass_down_Ex())
-		elif requester is self.x2:
-			return sumMu - np.dot(sumC,self.x1.pass_down_Ex())
+		if requester is self.A:
+			return sumMu - np.dot(sumC,self.B.pass_down_Ex())
+		elif requester is self.B:
+			return sumMu - np.dot(sumC,self.A.pass_down_Ex())
 
 	def pass_up_m1(self, requester):
 		"""return the sum of the precision matrices for the children of this
@@ -119,7 +119,7 @@ class Addition(Node):
 		----------
 		<A+B> = <A> + <B>
 		"""
-		return self.x1.pass_down_Ex()+self.x2.pass_down_Ex()
+		return self.A.pass_down_Ex()+self.B.pass_down_Ex()
 
 	def pass_down_ExxT(self):
 		"""Return the expected value of the 'outer procuct' of the sum of the parent nodes
@@ -127,16 +127,16 @@ class Addition(Node):
 		Notes
 		----------
 		$ <(A+B)(A+B)>^\top = <AA^\top> + <BB^\top> + <A><B>^\top + <B><A>^\top $""" 
-		return self.x1.pass_down_ExxT() + self.x2.pass_down_ExxT() + np.dot(self.x1.pass_down_Ex(),self.x2.pass_down_Ex().T) + np.dot(self.x2.pass_down_Ex(), self.x1.pass_down_Ex().T)
+		return self.A.pass_down_ExxT() + self.B.pass_down_ExxT() + np.dot(self.A.pass_down_Ex(),self.B.pass_down_Ex().T) + np.dot(self.B.pass_down_Ex(), self.A.pass_down_Ex().T)
 
 class Multiplication(Node):
 	"""creates a node by multiplying two other nodes together.  
 
 	Arguments
 	----------
-	x1 : numpy.array or node
+	A : numpy.array or node
 		the first node
-	x2 : numpy.array or node
+	B : numpy.array or node
 		the second node
 		
 
@@ -161,24 +161,24 @@ class Multiplication(Node):
 	C = A*B# returns an instance if this class
 	
 	"""
-	def __init__(self,x1,x2):
-		m1,n1 = x1.shape
-		m2,n2 = x2.shape
+	def __init__(self,A,B):
+		m1,n1 = A.shape
+		m2,n2 = B.shape
 		assert n1 == m2, "incompatible multiplication dimensions"
 		assert n2 == 1, "right hand object must be a vector"
 		Node.__init__(self, (m1,n2))
-		if type(x1) == np.ndarray:
-			self.x1 = Constant(x1)
+		if type(A) == np.ndarray:
+			self.A = Constant(A)
 		else:
-			self.x1 = x1
+			self.A = A
 
-		if type(x2) == np.ndarray:
-			self.x2 = Constant(x2)
+		if type(B) == np.ndarray:
+			self.B = Constant(B)
 		else:
-			self.x2 = x2
+			self.B = B
 
-		x1.addChild(self)
-		x2.addChild(self)
+		A.addChild(self)
+		B.addChild(self)
 
 	def pass_up_m2(self,requester):
 		""" Pass up the 'm2' message to the parent.
@@ -190,16 +190,16 @@ class Multiplication(Node):
 		3) pass it up the network
 		"""
 		sum_m2 = sum([e.pass_up_m2(self) for e in self.children])
-		if requester is self.x1:
-			if self.x1.shape[1] == 1:#lhs is column: therefore rhs is scalar - easy enough
-				return float(self.x2.pass_down_Ex())*sum_m2
-			elif self.x1.shape[0] == 1:#lhs is a transposed vector (or hstacked scalars?)  
-				return self.x2.pass_down_Ex().T*float(sum_m2)
+		if requester is self.A:
+			if self.A.shape[1] == 1:#lhs is column: therefore rhs is scalar - easy enough
+				return float(self.B.pass_down_Ex())*sum_m2
+			elif self.A.shape[0] == 1:#lhs is a transposed vector (or hstacked scalars?)  
+				return self.B.pass_down_Ex().T*float(sum_m2)
 			else: #lhs is a hstack matrix! Return a tuple and tel it deal with it.
-				return sum_m2,self.x2.pass_down_Ex()
+				return sum_m2,self.B.pass_down_Ex()
 				
-		elif requester is self.x2:
-			return  np.dot(self.x1.pass_down_Ex().T,sum_m2)
+		elif requester is self.B:
+			return  np.dot(self.A.pass_down_Ex().T,sum_m2)
 
 
 	def pass_up_m1(self,requester):
@@ -210,34 +210,34 @@ class Multiplication(Node):
 		2) modify it by the co-parent
 		3) pass up."""
 		sumC = sum([e.pass_up_m1(self) for e in self.children])
-		if requester is self.x1:
-			x2x2T = self.x2.pass_down_ExxT()# this must be scalar in this case?
-			if self.x1.shape[1]==1:# one column (rhs scalar): easy enough
-				return sumC*float(x2x2T)
-			elif self.x1.shape[0] == 1:#lhs is a transpose (or hstack of scalars?)
-				return float(sumC)*x2x2T
+		if requester is self.A:
+			BBT = self.B.pass_down_ExxT()# this must be scalar in this case?
+			if self.A.shape[1]==1:# one column (rhs scalar): easy enough
+				return sumC*float(BBT)
+			elif self.A.shape[0] == 1:#lhs is a transpose (or hstack of scalars?)
+				return float(sumC)*BBT
 			else:#lhs is a matrix. pass up the data for the hstack (or simliar ) instance to deal with
-				return sumC,self.x2.pass_down_ExxT()
-		elif requester is self.x2:
-			if self.x1.shape[1]==1:#lhs has only one column, rhs is scalar
-				x1x1T = self.x1.pass_down_ExxT()
-				return np.trace(np.dot(x1x1T,sumC))
-			elif self.x1.shape[0] == 1:# lhs is transpose (or hstacked scalars) : therefore product is scalar
-				return float(sumC)*self.x1.pass_down_ExTx()
+				return sumC,self.B.pass_down_ExxT()
+		elif requester is self.B:
+			if self.A.shape[1]==1:#lhs has only one column, rhs is scalar
+				AAT = self.A.pass_down_ExxT()
+				return np.trace(np.dot(AAT,sumC))
+			elif self.A.shape[0] == 1:# lhs is transpose (or hstacked scalars) : therefore product is scalar
+				return float(sumC)*self.A.pass_down_ExTx()
 			else:#lhs is a matrix.
-				if isinstance(self.x1,Constant):
-					return np.dot(self.x1.pass_down_Ex().T,np.dot(sumC,self.x1.pass_down_Ex()))
+				if isinstance(self.A,Constant):
+					return np.dot(self.A.pass_down_Ex().T,np.dot(sumC,self.A.pass_down_Ex()))
 				else: #lhs must be a hstack?
-					#need to do <x1.T * sumC * x1>
-					dim = self.x2.shape[0]
+					#need to do <A.T * sumC * A>
+					dim = self.B.shape[0]
 					ret = np.zeros((dim,dim))
 					for i in range(dim):
 						for j in range(dim):
 							if i==j:
-								ret[i,j] = np.trace(np.dot(self.x1.parents[i].pass_down_ExxT(),sumC))
+								ret[i,j] = np.trace(np.dot(self.A.parents[i].pass_down_ExxT(),sumC))
 							else:
 								
-								ret[i,j] = np.trace(np.dot(np.dot(self.x1.parents[i].pass_down_Ex(),self.x1.parents[j].pass_down_Ex().T),sumC))
+								ret[i,j] = np.trace(np.dot(np.dot(self.A.parents[i].pass_down_Ex(),self.A.parents[j].pass_down_Ex().T),sumC))
 					return ret
 					
 					
@@ -249,7 +249,7 @@ class Multiplication(Node):
 		----------
 		<AB> = <A><B>
 		"""
-		return np.dot(self.x1.pass_down_Ex() , self.x2.pass_down_Ex())
+		return np.dot(self.A.pass_down_Ex() , self.B.pass_down_Ex())
 
 	def pass_down_ExxT(self):
 		"""Return the Expected value of the 'outer' product of the product of the two parent nodes.
@@ -258,25 +258,25 @@ class Multiplication(Node):
 		----------
 		<(AB)(AB)^\top> = eek. TODO
 		"""
-		if self.x1.shape[1] == 1:#rhs is scalar: this is quite easy
-			return self.x1.pass_down_ExxT() * float(self.x2.pass_down_ExxT())
-		elif self.x1.shape[0] == 1:#lhs is transposed vector (or hstacked scalar?)
-			return np.trace(np.dot(self.x2.pass_down_ExxT(),self.x1.pass_down_ExTx()))
+		if self.A.shape[1] == 1:#rhs is scalar: this is quite easy
+			return self.A.pass_down_ExxT() * float(self.B.pass_down_ExxT())
+		elif self.A.shape[0] == 1:#lhs is transposed vector (or hstacked scalar?)
+			return np.trace(np.dot(self.B.pass_down_ExxT(),self.A.pass_down_ExTx()))
 		else:
 			#lhs is matrix.
-			if isinstance(self.x1,Constant):
-				return np.dot(self.x1.pass_down_Ex(),np.dot(self.x2.pass_downExxT(),self.x1.pass_down_Ex()))
+			if isinstance(self.A,Constant):
+				return np.dot(self.A.pass_down_Ex(),np.dot(self.B.pass_downExxT(),self.A.pass_down_Ex()))
 			else:#lhs is hstack
-				x2x2T = self.x2.pass_down_ExxT()
-				dim = self.x1.shape[0]
+				BBT = self.B.pass_down_ExxT()
+				dim = self.A.shape[0]
 				ret = np.zeros((dim,dim))
-				dim2 = x2x2T.shape[0]
+				dim2 = BBT.shape[0]
 				for i in range(dim2):
 					for j in range(dim2):
 						if i==j:
-							ret += self.x1.parents[i].pass_down_ExxT()*float(x2x2T[i,i])
+							ret += self.A.parents[i].pass_down_ExxT()*float(BBT[i,i])
 						else:
-							ret += np.dot(self.x1.parents[i].pass_down_Ex(),self.x1.parents[j].pass_down_Ex().T)*float(x2x2T[i,j])
+							ret += np.dot(self.A.parents[i].pass_down_Ex(),self.A.parents[j].pass_down_Ex().T)*float(BBT[i,j])
 				return ret
 
 class Constant(Node):
