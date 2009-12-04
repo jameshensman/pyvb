@@ -113,7 +113,8 @@ class Gaussian(Node):
 		child_m1s = [e.pass_up_m1(self) for e in self.children]
 		# here's the calculation
 		self.qprec = pprec + sum(child_m1s) #that's it!
-		self.qcov = np.linalg.inv(self.qprec)
+		self.qprec_chol = np.linalg.cholesky(self.qprec)
+		self.qcov = np.linalg.solve(qprec_chol.T,np.linalg.solve(self.qprec_chol,np.eye(self.shape[0])))
 		weighted_exs = np.dot(pprec,pmu) + sum(child_m2s)
 		self.qmu = np.dot(self.qcov,weighted_exs)
 		
@@ -121,7 +122,8 @@ class Gaussian(Node):
 			#calculate the posterior probability of q given the observations.
 			#find mean, covariance or observed parts
 			cov_obs = self.qcov.take(self.obs_index,0).take(self.obs_index,1)
-			cov_obs_inv = np.linalg.inv(cov_obs)
+			cov_obs_chol = np.linalg.cholesky(cov_obs)
+			cov_obs_inv = np.linalg.solve(cov_obs_chol.T,np.linalg.solve(cov_obs_chol,np.eye(cov_obs.shape[0])))
 			#find covariance between observed data and all data:
 			cov_obs_all = self.qcov.take(self.obs_index,1)
 			#calculate marginals and set into qcov,qmu and qprec
