@@ -129,6 +129,23 @@ class Gaussian(Node):
 			self.qcov -= np.dot( cov_obs_all,np.dot(cov_obs_inv,cov_obs_all.T))
 			#self.qprec = np.linalg.inv(self.qcov) - not actually needed...
 			
+	def log_lower_bound(self):
+		"""calculate and return this node's contribution to the lower bound of the log of the model evidence"""
+		parent_prec = self.precision_parent.pass_down_Ex()
+		parent_mu = self.mean_parent.pass_down_Ex()
+		
+		if self.observed:
+			this_mu = self.obs_value
+			this_cov = np.zeros((self.shape[0],self.shape[0]))
+		else:
+			this_mu = self.qmu
+			this_cov = self.qcov
+		ret = -0.5*self.shape[0]*np.log(2*np.pi) \
+			+ 0.5*np.log(np.linalg.det(parent_prec))\
+			-0.5*np.trace(np.dot(parent_prec,self.pass_down_ExxT() + self.mean_parent.pass_down_ExxT() \
+			-2* np.dot(self.pass_down_Ex(),self.mean_parent.pass_down_Ex().T)) ) #expected value of joint probability
+		ret -= -0.5*self.shape[0]*np.log(2*np.pi) - 0.5*np.log(np.linalg.det(self.qcov)) - 0.5*self.shape[0]   #-ve entropy of q
+		return ret	
 			
 	
 	def pass_down_Ex(self):

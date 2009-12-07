@@ -3,6 +3,7 @@
 # Licensed under the Gnu General Public license, see COPYING
 import numpy as np
 import node
+from scipy import special #needed fro calculating lower bound in gamma, wishart
 
 class ConjugacyError(ValueError):
 	
@@ -112,6 +113,16 @@ class Gamma:
     
 	def pass_down_Ex(self):
 		return np.eye(self.shape[0])*self.qa/self.qb
+	
+	def log_lower_bound(self):
+		Elnx = special.digamma(self.qa)-np.log(self.qb)#expected value of the log of this node
+		#terms in joint prob not covered by child nodes:
+		ret = (self.a0-1)*Elnx - special.gammaln(self.a0) + self.a0*np.log(self.b0) - self.b0*(self.qa/self.qb)
+		ret -= (self.qa-1)*Elnx - special.gammaln(self.qa) + self.qa*np.log(self.qb) - self.qb*(self.qa/self.qb)#entropy terms
+		
+		#KL divergence of q from p - according to wikipedia - this is bollocks!
+		#ret = special.gammaln(self.qa)-special.gamma(self.a0) + self.a0*np.log(self.b0) - self.qa*np.log(self.qb) + (self.a0-self.qa)*(special.digamma(self.a0)-np.log(self.b0)) + (self.a0/self.b0)*(self.qb-self.b0)
+		return ret
 		
 class DiagonalGamma:
 	"""A class to implemet a diagonal prior for a multivariate (diagonal) Gaussian. Effectively a series of Gamma distributions"""
