@@ -137,8 +137,10 @@ class Gaussian(Node):
 			+ 0.5*np.log(np.linalg.det(parent_prec))\
 			-0.5*np.trace(np.dot(parent_prec,self.pass_down_ExxT() + self.mean_parent.pass_down_ExxT() \
 			-2* np.dot(self.pass_down_Ex(),self.mean_parent.pass_down_Ex().T)) ) #expected value of joint probability
-		if not self.observed:
+		if not (self.observed or self.partially_observed):
 			ret -= -0.5*self.shape[0]*np.log(2*np.pi) - 0.5*np.log(np.linalg.det(self.qcov)) - 0.5*self.shape[0]   #-ve entropy of q
+		elif self.partially_observed:
+			ret -= 0.5*len(self.obs_index)*np.log(2*np.pi) -0.5*np.log(np.linalg.det(self.qcov.take(self.obs_index,0).take(self.obs_index,1))) - 0.5*len(self.obs_index)
 		return ret	
 			
 	
