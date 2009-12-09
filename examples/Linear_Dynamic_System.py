@@ -15,7 +15,7 @@ if __name__=='__main__':
 	q = 2 #latent (state) dimension
 	d = 5 #observation dimension
 	T = 200 # timesteps
-	niters = 50 # VB iterations
+	niters =100 # VB iterations
 	
 	true_A = np.random.randn(q,q)
 	while np.max(np.abs(np.linalg.eig(true_A)[0])) > 1:# make sure we havea stable system.
