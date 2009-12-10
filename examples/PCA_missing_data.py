@@ -39,7 +39,7 @@ def PCA_missing_data(plot=True):
 	#make a network object
 	net = Network()
 	net.addnode(W)
-	net.fetch_network()# automagically fetches all of the other nodes...
+	net.find_connected(W)# automagically fetches all of the other nodes...
 	
 	#infer!
 	net.learn(100)
