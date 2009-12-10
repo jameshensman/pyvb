@@ -160,7 +160,13 @@ class DiagonalGamma:
 		
 	def pass_down_Ex(self):
 		return np.diag(self.qa/self.qb)
-	    
+		
+	def log_lower_bound(self):
+		Elnx = special.digamma(self.qa)-np.log(self.qb)#expected value of the log of this node
+		#terms in joint prob not covered by child nodes:
+		ret = (self.a0-1)*Elnx - special.gammaln(self.a0) + self.a0*np.log(self.b0) - self.b0*(self.qa/self.qb)
+		ret -= (self.qa-1)*Elnx - special.gammaln(self.qa) + self.qa*np.log(self.qb) - self.qb*(self.qa/self.qb)#entropy terms
+		return sum(ret)
 class Wishart:
 	""" A wishart random variable: the conjugate prior to the precision of a (full) multivariate Gaussian distribution"""
 	def __init__(self,dim,v0,w0):
