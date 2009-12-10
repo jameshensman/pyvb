@@ -35,7 +35,13 @@ class Node:
 			child node to add to this node
 		"""
 		self.children.append(child)
+		
+	def update(self):
+		pass
 	
+	def log_lower_bound(self):
+		return 0.
+		
 	def __add__(self,other):
 		return Addition(self,other)
 	def __mul__(self,other):
@@ -85,7 +91,7 @@ class Addition(Node):
 
 		A.addChild(self)
 		B.addChild(self)
-
+	
 	def pass_up_m1_m2(self,requester):
 		"""Pass up both m1 and m2 messages
 		TODO: proper docstring
@@ -172,7 +178,7 @@ class Multiplication(Node):
 
 		A.addChild(self)
 		B.addChild(self)
-
+	
 	def pass_up_m1_m2(self,requester):
 		"""Pass up both m1 and m2 messages to the requesting aprent
 		

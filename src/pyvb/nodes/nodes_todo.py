@@ -22,8 +22,6 @@ class hstack(node.Node):
 		
 		[e.addChild(self) for e in self.parents]
 		
-		
-		
 	def pass_down_Ex(self):
 		return np.hstack([e.pass_down_Ex() for e in self.parents])
 		
