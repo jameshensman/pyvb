@@ -14,12 +14,18 @@ class Network:
 			self.nodes.append(n)
 		
 			
+	def find_iterable(self):
+		"""make a list of all of the nodes which are to be updated"""
+		self.iterable_nodes = [e for e in self.nodes if isinstance(e,Gaussian) or isinstance(e,Gamma) or isinstance(e,DiagonalGamma) or isinstance(e,Wishart)]
+			
 	
 	def learn(self,niters):
+		self.find_iterable()
+		print 'found' + str(len(self.iterable_nodes))+' iterable nodes'
 		for i in range(niters):
-			for n in self.nodes:
+			for n in self.iterable_nodes:
 				n.update()
-			llb = np.sum([n.log_lower_bound() for n in self.nodes])	
+			llb = np.sum([n.log_lower_bound() for n in self.iterable_nodes])	
 			print niters-i,llb
 	
 	def fetch_network(self):
