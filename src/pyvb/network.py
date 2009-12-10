@@ -19,14 +19,21 @@ class Network:
 		self.iterable_nodes = [e for e in self.nodes if isinstance(e,Gaussian) or isinstance(e,Gamma) or isinstance(e,DiagonalGamma) or isinstance(e,Wishart)]
 			
 	
-	def learn(self,niters):
+	def learn(self,niters,tol=1e-3):
 		self.find_iterable()
 		print 'found' + str(len(self.iterable_nodes))+' iterable nodes'
+		
+		old_llb = -np.inf
 		for i in range(niters):
 			for n in self.iterable_nodes:
 				n.update()
 			llb = np.sum([n.log_lower_bound() for n in self.iterable_nodes])	
+			
 			print niters-i,llb
+			#check for convergence
+			if llb-old_llb < tol:
+				break
+			old_llb = llb
 	
 	def fetch_network(self):
 		"""find all of the nodes connected to the nodes in the network"""
