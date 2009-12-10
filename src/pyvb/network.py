@@ -19,6 +19,8 @@ class Network:
 		for i in range(niters):
 			for n in self.nodes:
 				n.update()
+			llb = np.sum([n.log_lower_bound() for n in self.nodes])	
+			print niters-i,llb
 	
 	def fetch_network(self):
 		"""find all of the nodes connected to the nodes in the network"""
@@ -38,6 +40,13 @@ class Network:
 				elif sum([isinstance(n,Addition), isinstance(n,Multiplication)]):
 					new_children = [e for e in n.children if not e in self.nodes]
 					new_parents = [e for e in [n.A, n.B] if not e in self.nodes]
+					new_nodes += len(new_children)+len(new_parents)
+					self.nodes.extend(new_children)
+					self.nodes.extend(new_parents)
+					
+				elif isinstance(n,hstack):
+					new_children = [e for e in n.children if not e in self.nodes]
+					new_parents = [e for e in n.parents if not e in self.nodes]
 					new_nodes += len(new_children)+len(new_parents)
 					self.nodes.extend(new_children)
 					self.nodes.extend(new_parents)
