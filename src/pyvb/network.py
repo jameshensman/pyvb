@@ -8,11 +8,10 @@ class Network:
 		
 	def addnode(self,n):
 		"""Add a node (or list of nodes) to the network"""
-		for n in nodes:
-			if type(n) is list:
-				self.nodes.extend(n)
-			else:
-				self.nodes.append(n)
+		if type(n) is list:
+			self.nodes.extend(n)
+		else:
+			self.nodes.append(n)
 		
 			
 	
@@ -29,13 +28,21 @@ class Network:
 		while new_nodes:
 			new_nodes = 0
 			for n in self.nodes:
-				if sum(isinstance(n,Gaussian), isinstance(n,Addition), isinstance(n,Multiplication)):
+				if isinstance(n,Gaussian):
 					new_children = [e for e in n.children if not e in self.nodes]
-					new_parents = [e for e in [n.mean_parent, precision_parent] if not e in self.nodes]
+					new_parents = [e for e in [n.mean_parent, n.precision_parent] if not e in self.nodes]
 					new_nodes += len(new_children)+len(new_parents)
 					self.nodes.extend(new_children)
 					self.nodes.extend(new_parents)
-				if sum(isinstance(n,Gamma), isinstance(n,DiagonalGamma), isinstance(wishart)):
+					
+				elif sum([isinstance(n,Addition), isinstance(n,Multiplication)]):
+					new_children = [e for e in n.children if not e in self.nodes]
+					new_parents = [e for e in [n.A, n.B] if not e in self.nodes]
+					new_nodes += len(new_children)+len(new_parents)
+					self.nodes.extend(new_children)
+					self.nodes.extend(new_parents)
+					
+				if sum([isinstance(n,Gamma), isinstance(n,DiagonalGamma), isinstance(n,Wishart)]):
 					new_children = [e for e in n.children if not e in self.nodes]
 					new_nodes += len(new_children)
 					self.nodes.extend(new_children)
