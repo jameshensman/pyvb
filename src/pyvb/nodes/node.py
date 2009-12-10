@@ -118,7 +118,9 @@ class Addition(Node):
 		Notes
 		----------
 		$ <(A+B)(A+B)>^\top = <AA^\top> + <BB^\top> + <A><B>^\top + <B><A>^\top $""" 
-		return self.A.pass_down_ExxT() + self.B.pass_down_ExxT() + np.dot(self.A.pass_down_Ex(),self.B.pass_down_Ex().T) + np.dot(self.B.pass_down_Ex(), self.A.pass_down_Ex().T)
+		
+		outer = np.dot(self.A.pass_down_Ex(),self.B.pass_down_Ex().T) 
+		return self.A.pass_down_ExxT() + self.B.pass_down_ExxT() + outer + outer.T
 
 class Multiplication(Node):
 	"""creates a node by multiplying two other nodes together.  
@@ -202,17 +204,22 @@ class Multiplication(Node):
 			else:#lhs is a matrix - need to do <A.T * sumC * A>
 				if isinstance(self.A,Constant):
 					return np.dot(self.A.pass_down_Ex().T,np.dot(sum_child_m1s,self.A.pass_down_Ex()))
-				else: #lhs must be a hstack?
-					dim = self.B.shape[0]
-					m1 = np.zeros((dim,dim))
-					for i in range(dim):
-						for j in range(dim):
-							if i==j:
-								m1[i,j] = np.trace(np.dot(self.A.parents[i].pass_down_ExxT(),sum_child_m1s))
-							else:
-								
-								m1[i,j] = np.trace(np.dot(np.dot(self.A.parents[i].pass_down_Ex(),self.A.parents[j].pass_down_Ex().T),sum_child_m1s))
-		
+				else:
+					dimB = self.B.shape[0]
+					A_Ex = self.A.pass_down_Ex()
+					dimA0,dimA1 = A_Ex.shape
+					
+					#by the power of broadcasting, I speed thee up. this is a 4D array containing all of the outer productes of the columns of Ex_A
+					A_outer = A_Ex.T.reshape(dimA1,1,dimA0,1)*A_Ex.T.reshape(1,dimA1,1,dimA0)
+					
+					#We need to add the covariances of the Columns of A to the diagonal of the above
+					#Warning: this is only going to work in the columns are Gaussian nodes - if they're addition we'll be fucked.
+					for i,e in enumerate(self.A.parents):
+						A_outer[i,i,:,:] += e.qcov 
+					
+					#dot can broad cast, and trace can deal with high dimensional arrays, if we're careful...
+					m1 = np.trace(np.dot(A_outer,sum_child_m1s),axis1=-1,axis2=-2)
+					
 		return m1,m2
 				
 
