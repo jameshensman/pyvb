@@ -4,7 +4,7 @@
 import numpy as np
 import sys
 sys.path.append('../src')
-from pyvb import nodes
+from pyvb import nodes,Network
 
 def PCA_missing_data(plot=True):
 	#Principal Component Analysis, with randomly missing data
@@ -36,14 +36,13 @@ def PCA_missing_data(plot=True):
 	Xs = [nodes.Gaussian(d,W*z+Mu,Beta) for z in Zs]
 	[xnode.observe(xval.reshape(d,1)) for xnode,xval in zip(Xs,Xdata)]
 	
+	#make a network object
+	net = Network()
+	net.addnode(W)
+	net.fetch_network()# automagically fetches all of the other nodes...
+	
 	#infer!
-	for i in range(niters):
-		[w.update() for w in Ws]
-		Mu.update()
-		[z.update() for z in Zs]
-		[x.update() for x in Xs]
-		Beta.update()
-		print niters-i
+	net.learn(100)
 		
 	#plot
 	if plot:
