@@ -26,12 +26,19 @@ class hstack(node.Node):
 		return np.hstack([e.pass_down_Ex() for e in self.parents])
 		
 	def pass_down_ExxT(self):
-		raise NotImplementedError
+		""""""
+		return np.sum([p.pass_down_ExxT() for p in self.parents],0)
 		
 	def pass_down_ExTx(self):
 		raise NotImplementedError
 		
 	def pass_up_m1_m2(self,requester):
+		if self.shape[1] ==1:
+			#i'm a hstack of only _one_ vector.
+			# a corner case I guess...
+			child_messages = [c.pass_up_m1_m2(self) for c in self.children]
+			return sum([e[0] for e in child_messages]),sum([e[1] for e in child_messages])
+			
 		#child messages consist of m1,m2,b,bbT
 		child_messages = [c.pass_up_m1_m2(self) for c in self.children]
 		

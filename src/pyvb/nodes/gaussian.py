@@ -169,4 +169,6 @@ class Gaussian(Node):
 		pp =  self.precision_parent.pass_down_Ex()
 		return (pp,np.dot(pp,self.qmu))
 		
+
+		
 	    
