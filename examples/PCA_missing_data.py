@@ -9,9 +9,9 @@ from pyvb import nodes,Network
 def PCA_missing_data(plot=True):
 	#Principal Component Analysis, with randomly missing data
 	q = 2 #latent dimension
-	d = 10 #observation dimension
+	d = 5 #observation dimension
 	N = 200
-	niters = 100
+	niters = 200
 	Nmissing = 100
 	true_W = np.random.randn(d,q)
 	true_Z = np.random.randn(N,q)
@@ -39,7 +39,7 @@ def PCA_missing_data(plot=True):
 	#make a network object
 	net = Network()
 	net.addnode(W)
-	net.find_connected(W)# automagically fetches all of the other nodes...
+	net.fetch_network()# automagically fetches all of the other nodes...
 	
 	#infer!
 	net.learn(100)
@@ -96,4 +96,4 @@ def PCA_missing_data(plot=True):
 		
 		
 if __name__=='__main__':
-	PCA_missing_data(False)
+	PCA_missing_data(True)
