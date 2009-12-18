@@ -210,7 +210,7 @@ class Multiplication(Node):
 			else:#lhs is a matrix - need to do <A.T * sumC * A>
 				if isinstance(self.A,Constant):
 					return np.dot(self.A.pass_down_Ex().T,np.dot(sum_child_m1s,self.A.pass_down_Ex()))
-				else:
+				elif hasattr(self.A,'parents'):#lhs is hstack
 					dimB = self.B.shape[0]
 					A_Ex = self.A.pass_down_Ex()
 					dimA0,dimA1 = A_Ex.shape
@@ -225,6 +225,9 @@ class Multiplication(Node):
 					
 					#dot can broad cast, and trace can deal with high dimensional arrays, if we're careful...
 					m1 = np.trace(np.dot(A_outer,sum_child_m1s),axis1=-1,axis2=-2)
+				else:#lhs is diagonalGaussian
+					aaT = self.A.qmu*self.A.qmu.T + self.A.qcov
+					m1 = aaT*sum_child_m1s
 					
 		return m1,m2
 				
@@ -253,7 +256,8 @@ class Multiplication(Node):
 			#lhs is matrix.
 			if isinstance(self.A,Constant):
 				return np.dot(self.A.pass_down_Ex(),np.dot(self.B.pass_downExxT(),self.A.pass_down_Ex()))
-			else:#lhs is hstack
+			#elif isinstance(self.A,hstack):#lhs is hstack TODO this could do with some broadcsting speedup
+			elif hasattr(self.A,'parents'): #lhs is hstack
 				BBT = self.B.pass_down_ExxT()
 				dim = self.A.shape[0]
 				ret = np.zeros((dim,dim))
@@ -265,6 +269,12 @@ class Multiplication(Node):
 						else:
 							ret += np.dot(self.A.parents[i].pass_down_Ex(),self.A.parents[j].pass_down_Ex().T)*float(BBT[i,j])
 				return ret
+			#elif isinstance(self.A,DiagonalGaussian):
+			else:
+				BBT = self.B.pass_down_ExxT()
+				aaT = self.A.qmu*self.A.qmu.T + self.A.qcov
+				return BBT*aaT #elementwise multiplication.
+				
 
 class Constant(Node):
 	"""A class to model a constant in a Bayesian Network,
