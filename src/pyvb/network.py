@@ -27,13 +27,13 @@ class Network:
 		for i in range(niters):
 			for n in self.iterable_nodes:
 				n.update()
-			llb = np.sum([n.log_lower_bound() for n in self.iterable_nodes])	
+			self.llb = np.sum([n.log_lower_bound() for n in self.iterable_nodes])	
 			
-			print niters-i,llb
+			print niters-i,self.llb
 			#check for convergence
-			if llb-old_llb < tol:
+			if self.llb-old_llb < tol:
 				break
-			old_llb = llb
+			old_llb = self.llb
 	
 	def fetch_network(self):
 		"""find all of the nodes connected to the nodes in the network"""
