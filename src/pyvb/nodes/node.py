@@ -298,6 +298,8 @@ class Constant(Node):
 		self.value = value
 		self.value_xxT = np.dot(value,value.T)
 		self.value_xTx = np.dot(value.T,value)
+		if self.shape[0]==self.shape[1]:
+			self.lndet = np.log(np.linalg.det(self.value))
 
 	def pass_down_Ex(self):
 		return self.value
@@ -305,3 +307,5 @@ class Constant(Node):
 		return self.value_xxT
 	def pass_down_ExTx(self):
 		return self.value_xTx
+	def pass_down_lndet(self):
+		return self.lndet

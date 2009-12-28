@@ -130,6 +130,10 @@ class Gamma:
 	def pass_down_Ex(self):
 		return np.eye(self.shape[0])*self.qa/self.qb
 	
+	def pass_down_lndet(self):
+		"""Return the log of the determinant of the expected value of this node"""
+		return np.log(np.power(self.qa/self.qb,self.shape[0]))
+	
 	def log_lower_bound(self):
 		Elnx = special.digamma(self.qa)-np.log(self.qb)#expected value of the log of this node
 		#terms in joint prob not covered by child nodes:
@@ -167,6 +171,10 @@ class DiagonalGamma:
 		
 	def pass_down_Ex(self):
 		return np.diag(self.qa/self.qb)
+		
+	def pass_down_lndet(self):
+		"""Return the log of the determinant of the expected value of this node"""
+		return np.log(np.prod(self.qa/self.qb))
 		
 	def log_lower_bound(self):
 		Elnx = special.digamma(self.qa)-np.log(self.qb)#expected value of the log of this node

@@ -122,18 +122,19 @@ class Gaussian(Node):
 			self.qcov -= np.dot( cov_obs_all,np.dot(cov_obs_inv,cov_obs_all.T))
 			
 	def log_lower_bound(self):
-		"""calculate and return this node's contribution to the lower bound of the log of the model evidence
+		"""Calculate and return this node's contribution to the lower bound of the log of the model evidence
 		"""
-		parent_prec = self.precision_parent.pass_down_Ex()
-		parent_mu = self.mean_parent.pass_down_Ex()
 		
+		#expected value of joint probability
 		ret = -0.5*self.shape[0]*np.log(2*np.pi) \
-			+ 0.5*np.log(np.linalg.det(parent_prec))\
-			-0.5*np.trace(np.dot(parent_prec,self.pass_down_ExxT() + self.mean_parent.pass_down_ExxT() \
-			-2* np.dot(self.qmu,self.mean_parent.pass_down_Ex().T)) ) #expected value of joint probability
+			+ 0.5*self.precision_parent.pass_down_lndet()\
+			-0.5*np.trace(np.dot(self.precision_parent.pass_down_Ex(),self.pass_down_ExxT() + self.mean_parent.pass_down_ExxT() \
+			-2* np.dot(self.qmu,self.mean_parent.pass_down_Ex().T)) ) 
 		if not (self.observed or self.partially_observed):
-			ret -= -0.5*self.shape[0]*np.log(2*np.pi) - 0.5*np.log(np.linalg.det(self.qcov)) - 0.5*self.shape[0]   #-ve entropy of q
+			#relative entropy from prior
+			ret -= -0.5*self.shape[0]*np.log(2*np.pi) - 0.5*np.log(np.linalg.det(self.qcov)) - 0.5*self.shape[0]
 		elif self.partially_observed:
+			#relative entropy of unobserved part
 			ret -= 0.5*len(self.missing_index)*np.log(2*np.pi) -0.5*np.log(np.linalg.det(self.qcov.take(self.missing_index,0).take(self.missing_index,1))) - 0.5*len(self.missing_index)
 		return ret	
 			
