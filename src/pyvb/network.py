@@ -1,6 +1,25 @@
 # -*- coding: utf-8 -*-
 from nodes import *
 class Network:
+	"""A class to represent a Variational Bayesian Network. 
+	
+	Arguments
+	----------
+	nodes - list
+		the nodes in the network
+		
+	Attributes
+	----------
+	nodes - list
+		Pointers to instances of all the nodes contained in the network
+		
+	Notes
+	----------
+	It is possible to create a network by instantiating the class with a subset of the network's nodes and calling self.fetch_network(). This is rather slow for big networks. 
+	
+	Before learning, the network class creates a list of _iterable_ nodes, a subset of nodes with applicable update() and log_lower_bound() functions.  
+	"""
+		
 	def __init__(self,nodes=[]):
 		self.nodes = []
 		[self.addnode(n) for n in nodes]
@@ -12,7 +31,6 @@ class Network:
 			self.nodes.extend(n)
 		else:
 			self.nodes.append(n)
-		
 			
 	def find_iterable(self):
 		"""make a list of all of the nodes which are to be updated"""
@@ -20,8 +38,9 @@ class Network:
 			
 	
 	def learn(self,niters,tol=1e-3):
+		"""Iterate through the iterable nodeds in the network, updating each until the log_lower_bound converges or max_iter is reached.  """
 		self.find_iterable()
-		print 'found' + str(len(self.iterable_nodes))+' iterable nodes'
+		print 'Found' + str(len(self.iterable_nodes))+' iterable nodes\n'
 		
 		old_llb = -np.inf
 		for i in range(niters):
@@ -32,11 +51,16 @@ class Network:
 			print niters-i,self.llb
 			#check for convergence
 			if self.llb-old_llb < tol:
+				print "Convergence!"
 				break
 			old_llb = self.llb
 	
 	def fetch_network(self):
-		"""find all of the nodes connected to the nodes in the network"""
+		"""Find all of the nodes connected to the nodes in the network
+		
+		Notes
+		---------
+		This is rather slow at the moment"""
 		N_starting_nodes = len(self.nodes)
 		
 		new_nodes = True

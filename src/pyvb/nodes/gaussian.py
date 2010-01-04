@@ -11,11 +11,11 @@ class Gaussian(Node):
 	Arguments
 	----------
 	dim : int
-		description
+		The dimensionality of the node
 	pmu : array or node  (arrays get wrapped in a Constant class)
-		prior mean
+		'prior' mean
 	pprec : array or node 
-		prior precision matrix
+		'prior' precision matrix
 
 	Attributes
 	----------
@@ -23,17 +23,21 @@ class Gaussian(Node):
 		a list of the children of this node
 	observed : boolean
 		flag to say if this node is observed
+	partially_observed : boolean
+		flag to say if this node is _partially_ observed
 	qmu : 
-		decription
-	qprec : 
-		description
+		Mean of the variational posterior
+	qcov : 
+		Covariance of the variational posterior
+		
 
 	Notes
 	----------
 
 	See Also
 	--------
-	pyvb.node : parent class
+	pyvb.Node : parent class
+	pyvb.nodes.Addition, Multiplication, Hstack: Operation classes for this node.
 	"""
 	def __init__(self,dim,pmu,pprec):
 		Node.__init__(self,(dim,1))
@@ -41,10 +45,10 @@ class Gaussian(Node):
 		assert pmu.shape==self.shape,"Parent node (or array) has incorrect dimension"
 		if type(pmu)==np.ndarray:
 			self.mean_parent = Constant(pmu)
-		elif sum([isinstance(pmu,e) for e in [Gaussian, Addition, Multiplication, Constant]]):
+		elif isinstance(pmu,(Gaussian, Addition, Multiplication, Constant)):
 			self.mean_parent = pmu
 		else:
-			raise ConjugacyError,'bad'
+			raise ConjugacyError,"mean parent for a Gaussian node should be one of:\nGaussian\nConstant\nAddition\nMultiplication\nnumpy array. \n\n"+str(type(pmu))+" is invalid"
 	
 		#Deal with prior precision parent (pprec)
 		assert pprec.shape == (self.shape[0],self.shape[0]), "Parent precision array has incorrect dimension"
@@ -53,7 +57,7 @@ class Gaussian(Node):
 		elif sum([isinstance(pprec,e) for e in Gamma,DiagonalGamma,Wishart,Constant]):
 			self.precision_parent = pprec
 		else:
-			raise ConjugacyError
+			raise ConjugacyError,"Precision parent for a Gaussian node should be one of:\nGamma\nDiagonalGamma\nWishart\nConstant\nnumpy array. \n\n"+str(type(pprec))+" is invalid"
 		
 		self.mean_parent.addChild(self)
 		self.precision_parent.addChild(self)
@@ -67,14 +71,13 @@ class Gaussian(Node):
 		self.qcov = np.linalg.inv(self.qprec)
 	
 	def observe(self,val):
-		"""assigns an observation to the node.
+		"""Assigns an observation to the node.
 			
 		Arguments
 		----------
 		val : numpy.array
 			observation vector of the same dimension as the node.  
 			NaN parts val are treated as missing data
-			
 			
 		Notes
 		----------
@@ -96,6 +99,11 @@ class Gaussian(Node):
 			self.qcov = np.zeros(self.qcov.shape)
 	
 	def update(self):
+		"""Update the (approximate, variational) posterior distribution of this node using VB messag passing
+		
+		Notes
+		----------
+		"""
 		# don't update this node if it's an observed one
 		if self.observed:
 			return
@@ -175,7 +183,11 @@ class DiagonalGaussian(Gaussian):
 	
 	Notes
 	----------
-	The qmu and qprec values are kept as for a normal Gaussian Class."""
+	The qmu and qprec values are kept as for a normal Gaussian Class.
+	
+	See Also
+	----------
+	nodes.Gaussian """
 	def __init__(self,dim,pmu,pprec):
 		Gaussian.__init__(self,dim,pmu,pprec)
 		self.shape = (self.shape[0],self.shape[0])
