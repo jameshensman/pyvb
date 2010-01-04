@@ -80,10 +80,26 @@ class Gamma:
 	"""
 	A Class to represent a Gamma random variable in a VB network
 	
+	Arguments
+	----------
+	dim - int
+		The dimension of the node (can be more than 1 - see notes)
+	a0 - float
+		The prior value of a
+	b0 - float
+		The prior value of b
 	
+	Attributes
+	----------
+	qa - float
+		The (variational) posterior value of a
+	qb - float
+		The (variational) posterior value of b
 
 	Notes
 	----------
+	The dimensionality of a Gamma node can be more than 1: this is useful for representing univariate noise. The expected value of the node is then simply a diagonal matrix with each diagonal element set to qa/qb.  
+	
 	Gamma does not inherrit from node.Node because it cannot be added, muliplied etc"""
 	def __init__(self,dim,a0,b0):
 		self.shape = (dim,dim)
@@ -103,12 +119,17 @@ class Gamma:
 			self.qa += 0.5*child.shape[0]
     
 	def update(self):
-		"""update only the b parameter, since the a parameter can be done is closed form and does not need to be iterated. Note the use of trace() allows for children whose shape is not (1,1)"""
+		"""
+		
+		Notes
+		----------
+		We update only the 'b' parameter, since the 'a' parameter can be done in closed form and does not need to be iterated. Note the use of trace() allows for children whose shape is not (1,1)"""
 		self.qb = self.b0
 		for child in self.children:
 			self.qb += 0.5*np.trace(child.pass_down_ExxT()) + 0.5*np.trace(child.mean_parent.pass_down_ExxT()) - np.trace(np.dot(child.pass_down_Ex(),child.mean_parent.pass_down_Ex().T))
     
 	def pass_down_Ex(self):
+		"""Returns the expected value of the node"""
 		return np.eye(self.shape[0])*self.qa/self.qb
 	
 	def pass_down_lndet(self):
@@ -116,13 +137,13 @@ class Gamma:
 		return np.log(np.power(self.qa/self.qb,self.shape[0]))
 	
 	def log_lower_bound(self):
+		"""Return this node's contribution to the log of the lower bound on the model evidence.   """
 		Elnx = special.digamma(self.qa)-np.log(self.qb)#expected value of the log of this node
 		#terms in joint prob not covered by child nodes:
 		ret = (self.a0-1)*Elnx - special.gammaln(self.a0) + self.a0*np.log(self.b0) - self.b0*(self.qa/self.qb)
-		ret -= (self.qa-1)*Elnx - special.gammaln(self.qa) + self.qa*np.log(self.qb) - self.qb*(self.qa/self.qb)#entropy terms
+		#entropy terms:
+		ret -= (self.qa-1)*Elnx - special.gammaln(self.qa) + self.qa*np.log(self.qb) - self.qb*(self.qa/self.qb)
 		
-		#KL divergence of q from p - according to wikipedia - this is bollocks!
-		#ret = special.gammaln(self.qa)-special.gamma(self.a0) + self.a0*np.log(self.b0) - self.qa*np.log(self.qb) + (self.a0-self.qa)*(special.digamma(self.a0)-np.log(self.b0)) + (self.a0/self.b0)*(self.qb-self.b0)
 		return ret
 		
 class DiagonalGamma:
