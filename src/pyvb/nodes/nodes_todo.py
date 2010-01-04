@@ -3,13 +3,14 @@
 # Licensed under the Gnu General Public license, see COPYING
 import numpy as np
 import node
-from scipy import special #needed fro calculating lower bound in gamma, wishart
+from scipy import special #needed for calculating lower bound in Gamma, Wishart
 
 class ConjugacyError(ValueError):
 	def __init__(self,message):
 		ValueError.__init__(self,message)	
 	
 class hstack(node.Node):
+	"""A class to represent a Matrix, whose columns are Normally distributed.  """
 	def __init__(self,parents):
 		dims = [e.shape[0] for e in parents]
 		shape = (dims[0],len(parents))
@@ -147,7 +148,15 @@ class Gamma:
 		return ret
 		
 class DiagonalGamma:
-	"""A class to implemet a diagonal prior for a multivariate (diagonal) Gaussian. Effectively a series of Gamma distributions"""
+	"""A class to implemet a diagonal prior for a multivariate (diagonal) Gaussian. Effectively a series of Gamma distributions
+	
+	Arguments
+	----------
+	
+	Attributes
+	----------
+	
+	"""
 	def __init__(self,dim,a0s,b0s):
 		self.shape = (dim,dim)
 		assert a0s.size==self.shape[0]
