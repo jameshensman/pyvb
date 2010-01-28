@@ -10,7 +10,15 @@ class ConjugacyError(ValueError):
 		ValueError.__init__(self,message)	
 	
 class hstack(node.Node):
-	"""A class to represent a Matrix, whose columns are Normally distributed.  """
+	"""A class to represent a Matrix whose columns are Normally distributed.  
+	
+	Arguments
+	----------
+	
+	Attributes
+	----------
+	
+	"""
 	def __init__(self,parents):
 		dims = [e.shape[0] for e in parents]
 		shape = (dims[0],len(parents))
@@ -135,7 +143,8 @@ class Gamma:
 	
 	def pass_down_lndet(self):
 		"""Return the log of the determinant of the expected value of this node"""
-		return np.log(np.power(self.qa/self.qb,self.shape[0]))
+		#return np.log(np.power(self.qa/self.qb,self.shape[0]))
+		return self.shape[0]*(np.log(self.qa) - np.log(self.qb))
 	
 	def log_lower_bound(self):
 		"""Return this node's contribution to the log of the lower bound on the model evidence.   """
